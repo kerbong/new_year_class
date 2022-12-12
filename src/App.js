@@ -22,6 +22,19 @@ const CLASS_NAME = [
   "하",
 ];
 
+const EXPLAINS = [
+  "* 브라우저 확대/축소 (Ctrl+마우스휠) 로 한 눈에 보이도록 설정한 후 사용하세요.",
+  "* 이름 / 이전반 / 성별 / 점수 / 비고 순서로 보여집니다.",
+  "* 초기화 버튼을 누르면 처음 반배정되었던 상태로 되돌아갑니다.",
+  "* 중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은학생이 있는지 확인해서 빨간색으로 표시합니다.",
+  "* 남자 앞번호 / 여자 앞번호 / 혼성번호 버튼을 누르면 현재 상태에서 성별을 기준으로 정렬됩니다.",
+  "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 2초 후에 학급이 이동됩니다.",
+  "* 학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로 이동됩니다.",
+  "* 비고가 '전출'인 학생은 정렬에 상관없이 가장 뒤로 배치됩니다.",
+  "* 엑셀파일로 저장하시면, 나이스 업로드용 / 교사용 명렬표 두 가지 엑셀파일이 저장됩니다.",
+  "* 다른 자료로 배정하시려면 사이트를 새로고침(F5) 해주세요.",
+];
+
 function App() {
   const [classStudents, setClassStudents] = useState([]);
   const [nextOriginClass, setNextOriginClass] = useState([]);
@@ -69,7 +82,15 @@ function App() {
       } else if (how === "whole") {
         new_cl.push(...wholeFilter);
       }
-      new_wholeClass.push(new_cl);
+      //전출학생 제외하고 배열만들기
+      let new_cl_transfer = new_cl.filter((stu) => stu.note !== "전출");
+      //전출인 학생 제일 뒤에 붙이기
+      new_cl.forEach((stu) => {
+        if (stu["note"] === "전출") {
+          new_cl_transfer.push(stu);
+        }
+      });
+      new_wholeClass.push(new_cl_transfer);
     });
     return new_wholeClass;
   };
@@ -199,6 +220,11 @@ function App() {
     if (Object.keys(tempStudent).length !== 0) {
       let new_AdaptClass = [...nextAdaptClass];
 
+      //만약 같은 반에서 빈자리에 넣기를 누른경우 작동하지 않도록
+      if (class_index === tempStudent.next_cl_index) {
+        return;
+      }
+
       //임시학생의 자리를 비우고
       new_AdaptClass[tempStudent.next_cl_index].splice(
         tempStudent.next_stu_index,
@@ -219,12 +245,16 @@ function App() {
 
   //엑셀파일 만들어서 저장
   const makeExcelFile = () => {
-    // 가상의 엑셀파일을 생성한다.
+    // 나이스 업로드 용
     const book = utils.book_new();
+    // 명렬표 용
+    const book2 = utils.book_new();
 
     let new_AdaptClass = [...nextAdaptClass];
     new_AdaptClass.forEach((cl, cl_index) => {
+      //나이스 업로드용
       let new_cl = [];
+
       new_cl.push([
         "성명",
         "이전학년명",
@@ -247,20 +277,61 @@ function App() {
       });
       const sheetData = utils.aoa_to_sheet(new_cl);
       sheetData["!cols"] = [
-        { wpx: 60 }, // A열
-        { wpx: 40 }, // B열
-        { wpx: 40 }, // C열
-        { wpx: 40 }, // D열
-        { wpx: 40 }, // D열
-        { wpx: 40 }, // D열
-        { wpx: 40 }, // D열
+        { wpx: 80 }, // 성명
+        { wpx: 60 }, // 이전학년
+        { wpx: 60 }, // 이전반명
+        { wpx: 60 }, // 이전번호
+        { wpx: 60 }, // 진급학년명
+        { wpx: 60 }, // 진급반번호
+        { wpx: 40 }, // 성별
       ];
 
       //시트에 작성한 데이터 넣기 파일명, 데이터, 시트명
       utils.book_append_sheet(book, sheetData, `${CLASS_NAME[cl_index]}반`);
+
+      //교사용 명렬표
+      let new_cl_2 = [];
+      new_cl_2.push([
+        "학년",
+        "반",
+        "번호 ",
+        "성명",
+        "성별",
+        "이전반",
+        "비고",
+        "협동",
+      ]);
+      cl.forEach((stu, stu_index) => {
+        new_cl_2.push([
+          +yearGrade.slice(8, 9),
+          CLASS_NAME[cl_index],
+          stu_index + 1,
+          stu.name,
+          stu.gender,
+          stu.exClass,
+          stu.note || "",
+          stu.teamWork || "",
+        ]);
+      });
+      const sheetData2 = utils.aoa_to_sheet(new_cl_2);
+      sheetData2["!cols"] = [
+        { wpx: 40 }, // 진급학년
+        { wpx: 40 }, // 진급반
+        { wpx: 40 }, // 진급번호
+        { wpx: 80 }, // 성명
+        { wpx: 40 }, // 성별
+        { wpx: 50 }, // 이전반
+        { wpx: 80 }, // 비고
+        { wpx: 40 }, // 협동
+      ];
+
+      //시트에 작성한 데이터 넣기 파일명, 데이터, 시트명
+      utils.book_append_sheet(book2, sheetData2, `${CLASS_NAME[cl_index]}반`);
     });
 
-    writeFile(book, "내년학급편성자료.xlsx");
+    writeFile(book, `${yearGrade} 학급편성자료(나이스용).xlsx`);
+
+    writeFile(book2, `${yearGrade} 학급편성자료(명렬표).xlsx`);
   };
 
   return (
@@ -431,31 +502,14 @@ function App() {
               엑셀파일저장
             </button>
           </div>
+          {/* 설명보여주기 부분의 설명*/}
           {showExplain && (
             <div className={classes["explainDiv"]}>
-              <p className={classes["explainSpan"]}>
-                *브라우저 확대/축소 (Ctrl+마우스휠) 로 한 눈에 보이도록 설정한
-                후 사용하세요.
-              </p>
-              <p className={classes["explainSpan"]}>
-                *초기화 버튼을 누르면 처음 반배정되었던 상태로 되돌아갑니다.
-              </p>
-              <p className={classes["explainSpan"]}>
-                *중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은
-                학생이 있는지 확인해서 빨간색으로 표시합니다.
-              </p>
-              <p className={classes["explainSpan"]}>
-                *남자 앞번호 / 여자 앞번호 / 혼성번호 버튼을 누르면 현재
-                상태에서 성별을 기준으로 정렬됩니다.
-              </p>
-              <p className={classes["explainSpan"]}>
-                *두 학생을 차례로 클릭하면 테두리가 표시 되고, 2초 후에 학급이
-                이동됩니다.
-              </p>
-              <p className={classes["explainSpan"]}>
-                *학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로
-                이동됩니다.
-              </p>
+              {EXPLAINS.map((expl, index) => (
+                <p key={"expl" + index} className={classes["explainSpan"]}>
+                  {expl}
+                </p>
+              ))}
             </div>
           )}
         </>
@@ -472,6 +526,7 @@ function App() {
                 <span className={classes["gradeClassSpan"]}>
                   {CLASS_NAME[index]} 반
                 </span>
+
                 <ul className={classes["newClass-ul"]} key={`newclass${index}`}>
                   {cl.map((stu, stu_index) => (
                     <li
@@ -532,11 +587,11 @@ function App() {
                       <span className={classes["newClassSpan-name"]}>
                         {stu.name}
                       </span>
-                      <span className={classes["newClassSpan-gender"]}>
-                        {stu.gender}
-                      </span>
                       <span className={classes["newClassSpan-exClass"]}>
                         {stu.exClass}
+                      </span>
+                      <span className={classes["newClassSpan-gender"]}>
+                        {stu.gender}
                       </span>
                       <span className={classes["newClassSpan-score"]}>
                         {stu.score}

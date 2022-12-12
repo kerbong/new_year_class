@@ -64,8 +64,9 @@ const ExcelUploader = (props) => {
   return (
     <div style={{ fontSize: "1.5rem" }}>
       {" "}
+      <h2> 🎒 분 반 해 요 🎶</h2>
       <p>양식 엑셀파일을 다운받아서 작성후 업로드하세요.</p>
-      <p>양식파일의 메모"를 꼭 확인해주세요.</p>
+      <p style={{ fontWeight: "bold" }}>양식파일의 "메모"를 꼭 확인해주세요.</p>
       <p>
         <a href="https://drive.google.com/uc?export=download&id=15_d08Hm-cqKOBO0EIiEtX6_3Sz6IlrS9">
           양식파일 다운
