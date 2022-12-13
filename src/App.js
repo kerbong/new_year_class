@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { utils, writeFile } from "xlsx";
 import Swal from "sweetalert2";
 import classes from "./App.module.scss";
@@ -6,20 +6,23 @@ import ExcelUploader from "./component/ExcelUploader";
 
 // 총 14반까지만 가능..
 const CLASS_NAME = [
-  "가",
-  "나",
-  "다",
-  "라",
-  "마",
-  "바",
-  "사",
-  "아",
-  "자",
-  "차",
-  "카",
-  "타",
-  "파",
-  "하",
+  [
+    "가",
+    "나",
+    "다",
+    "라",
+    "마",
+    "바",
+    "사",
+    "아",
+    "자",
+    "차",
+    "카",
+    "타",
+    "파",
+    "하",
+  ],
+  ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"],
 ];
 
 const EXPLAINS = [
@@ -45,6 +48,7 @@ function App() {
   const [yearGrade, setYearGrade] = useState(null);
   const [divided, setDivided] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
+  const [hanglOrNum, setHanglOrNum] = useState(0);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -263,6 +267,7 @@ function App() {
         "진급학년명",
         "진급반번호 ",
         "성별",
+        "생년월일",
       ]);
       cl.forEach((stu, stu_index) => {
         new_cl.push([
@@ -273,21 +278,27 @@ function App() {
           +yearGrade.slice(8, 9),
           stu_index + 1,
           stu.gender,
+          stu.birthday,
         ]);
       });
       const sheetData = utils.aoa_to_sheet(new_cl);
       sheetData["!cols"] = [
-        { wpx: 80 }, // 성명
+        { wpx: 40 }, // 성명
         { wpx: 60 }, // 이전학년
         { wpx: 60 }, // 이전반명
         { wpx: 60 }, // 이전번호
         { wpx: 60 }, // 진급학년명
         { wpx: 60 }, // 진급반번호
         { wpx: 40 }, // 성별
+        { wpx: 70 }, // 생년월일
       ];
 
       //시트에 작성한 데이터 넣기 파일명, 데이터, 시트명
-      utils.book_append_sheet(book, sheetData, `${CLASS_NAME[cl_index]}반`);
+      utils.book_append_sheet(
+        book,
+        sheetData,
+        `${CLASS_NAME[hanglOrNum][cl_index]}반`
+      );
 
       //교사용 명렬표
       let new_cl_2 = [];
@@ -297,6 +308,7 @@ function App() {
         "번호 ",
         "성명",
         "성별",
+        "생년월일",
         "이전반",
         "비고",
         "협동",
@@ -304,10 +316,11 @@ function App() {
       cl.forEach((stu, stu_index) => {
         new_cl_2.push([
           +yearGrade.slice(8, 9),
-          CLASS_NAME[cl_index],
+          CLASS_NAME[hanglOrNum][cl_index],
           stu_index + 1,
           stu.name,
           stu.gender,
+          stu.birthday,
           stu.exClass,
           stu.note || "",
           stu.teamWork || "",
@@ -320,13 +333,18 @@ function App() {
         { wpx: 40 }, // 진급번호
         { wpx: 80 }, // 성명
         { wpx: 40 }, // 성별
+        { wpx: 80 }, // 생년월일
         { wpx: 50 }, // 이전반
-        { wpx: 80 }, // 비고
+        { wpx: 60 }, // 비고
         { wpx: 40 }, // 협동
       ];
 
       //시트에 작성한 데이터 넣기 파일명, 데이터, 시트명
-      utils.book_append_sheet(book2, sheetData2, `${CLASS_NAME[cl_index]}반`);
+      utils.book_append_sheet(
+        book2,
+        sheetData2,
+        `${CLASS_NAME[hanglOrNum][cl_index]}반`
+      );
     });
 
     writeFile(book, `${yearGrade} 학급편성자료(나이스용).xlsx`);
@@ -352,56 +370,82 @@ function App() {
         // {/* 학생명부가 있으면 반배정 규칙 선택하기 1.ㄹ 2.z  +  내년 학급수 입력 후 반배정!버튼 누르기*/}
         classStudents?.length > 0 && (
           <>
-            {/* 분반할 때 방법 ㄹ / z 선택 */}
-            <div>
-              <button
-                id="way2"
-                className={
-                  divideType === "way2"
-                    ? classes["clickedBtn"]
-                    : classes["nonClickedBtn"]
-                }
-                onClick={(e) => divideTypeHandler(e)}
-              >
-                Z 방식 분반
-              </button>
-              <button
-                id="way1"
-                className={
-                  divideType === "way1"
-                    ? classes["clickedBtn"]
-                    : classes["nonClickedBtn"]
-                }
-                onClick={(e) => divideTypeHandler(e)}
-              >
-                ㄹ 방식 분반
-              </button>
-            </div>
-
-            {/* 분반 남/여 앞번호 설정 */}
-            <div>
-              <button
-                id="female"
-                className={
-                  firstMale === "female"
-                    ? classes["clickedBtn"]
-                    : classes["nonClickedBtn"]
-                }
-                onClick={() => setFirstMale("female")}
-              >
-                여자 앞번호
-              </button>
-              <button
-                id="male"
-                className={
-                  firstMale === "male"
-                    ? classes["clickedBtn"]
-                    : classes["nonClickedBtn"]
-                }
-                onClick={() => setFirstMale("male")}
-              >
-                남자 앞번호
-              </button>
+            <div className={classes["newClassOption"]}>
+              {/* 분반할 때 방법 ㄹ / z 선택 */}
+              <div className={classes["btnGroup-div"]}>
+                <button
+                  id="way2"
+                  className={
+                    divideType === "way2"
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={(e) => divideTypeHandler(e)}
+                >
+                  Z 방식 분반
+                </button>
+                <button
+                  id="way1"
+                  className={
+                    divideType === "way1"
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={(e) => divideTypeHandler(e)}
+                >
+                  ㄹ 방식 분반
+                </button>
+              </div>
+              {/* 분반 남/여 앞번호 설정 */}
+              <div className={classes["btnGroup-div"]}>
+                <button
+                  id="female"
+                  className={
+                    firstMale === "female"
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setFirstMale("female")}
+                >
+                  여자 앞번호
+                </button>
+                <button
+                  id="male"
+                  className={
+                    firstMale === "male"
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setFirstMale("male")}
+                >
+                  남자 앞번호
+                </button>
+              </div>
+              {/* 학급명 가나다 or 123 */}
+              <div className={classes["btnGroup-div"]}>
+                <button
+                  id="hangle"
+                  className={
+                    hanglOrNum === 0
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setHanglOrNum(0)}
+                >
+                  한글반명(가나다..)
+                </button>
+                <button
+                  id="hangle"
+                  className={
+                    hanglOrNum === 1
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setHanglOrNum(1)}
+                >
+                  숫자반명(123..)
+                </button>
+              </div>
             </div>
             <form onSubmit={submitHandler} className={classes["form"]}>
               <div className={classes["formLabelInput"]}>
@@ -524,7 +568,7 @@ function App() {
                 key={cl + index + "반div"}
               >
                 <span className={classes["gradeClassSpan"]}>
-                  {CLASS_NAME[index]} 반
+                  {CLASS_NAME[hanglOrNum][index]} 반
                 </span>
 
                 <ul className={classes["newClass-ul"]} key={`newclass${index}`}>
@@ -536,9 +580,7 @@ function App() {
                       } ${
                         stu.teamWork === "배드" ? classes["badStudent"] : ""
                       } ${
-                        stu.teamWork === "특수반"
-                          ? classes["specialStudent"]
-                          : ""
+                        stu.note === "특수반" ? classes["specialStudent"] : ""
                       }`}
                       key={stu.exClass + stu.name}
                       onClick={(e) => {
@@ -617,8 +659,7 @@ function App() {
                   {cl.filter((stu) => stu.teamWork === "배드").length} 명
                 </div>
                 <div className={classes["specialStudent"]}>
-                  특수반 -{" "}
-                  {cl.filter((stu) => stu.teamWork === "특수반").length} 명
+                  특수반 - {cl.filter((stu) => stu.note === "특수반").length} 명
                 </div>
                 <div>비고 - {cl.filter((stu) => stu.note !== "").length}</div>
                 <div>
@@ -631,6 +672,9 @@ function App() {
           </div>
         </>
       )}
+      <footer className={classes["footer"]}>
+        by 말랑한거봉🍇 kerbong@gmail.com
+      </footer>
     </div>
   );
 }

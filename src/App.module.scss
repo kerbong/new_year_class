@@ -5,9 +5,9 @@
   align-items: center;
 }
 @mixin btn {
-  padding: 30px;
+  padding: 20px;
   background-color: rgb(183, 140, 182);
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   border-radius: 20px;
   border-width: 0;
   box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
@@ -26,7 +26,7 @@
 .clickedBtn {
   @include btn;
   font-size: 1.6rem;
-  padding: 40px;
+  padding: 30px;
   font-weight: bold;
 }
 
@@ -163,4 +163,29 @@
 
 .explainBg {
   background-color: rgb(135, 222, 195);
+}
+
+.footer {
+  position: static;
+
+  height: 40px;
+  width: 100%;
+  background: #e2dbe2;
+  color: #55405b;
+  margin-top: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnGroup-div {
+  background-color: #8a2be217;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  margin: 10px;
+}
+.newClassOption {
+  display: flex;
+  justify-content: center;
 }

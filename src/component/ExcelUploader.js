@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import classes from "../App.module.scss";
 import { read, utils } from "xlsx";
+import Swal from "sweetalert2";
 
 const ExcelUploader = (props) => {
   const [classStudents, setClassStudents] = useState([]);
@@ -29,6 +30,7 @@ const ExcelUploader = (props) => {
             rows.forEach((row) => {
               new_rows.push({
                 exClass: +row["반"],
+                birthday: +row["생년월일"],
                 num: +row["번호"],
                 gender: row["성별"],
                 name: row["이름"],
@@ -49,7 +51,11 @@ const ExcelUploader = (props) => {
           //학생정보가 저장되면 로컬스토리지에 문자로 저장해두기
           // localStorage.setItem("randomStudents", JSON.stringify(new_rows));
         } catch (error) {
-          //   console.log(error);
+          Swal.fire({
+            icon: "error",
+            title: "업로드불가",
+            text: "엑셀파일에 비어있는 행, 열이 있는지 확인해주세요! 문제가 지속될 경우 알려주세요!",
+          });
         }
       };
       //   console.log(Array.isArray(class_students));
@@ -68,12 +74,12 @@ const ExcelUploader = (props) => {
       <p>양식 엑셀파일을 다운받아서 작성후 업로드하세요.</p>
       <p style={{ fontWeight: "bold" }}>양식파일의 "메모"를 꼭 확인해주세요.</p>
       <p>
-        <a href="https://drive.google.com/uc?export=download&id=15_d08Hm-cqKOBO0EIiEtX6_3Sz6IlrS9">
+        <a href="https://drive.google.com/uc?export=download&id=1K8n8-7tZF3oVZyRx-vykKOXv3UcwLHCr">
           양식파일 다운
         </a>
       </p>
-      <p>*필수존재항목 - 반 번호 성별 이름 총점 비고 협동</p>
-      <p>*필수입력항목 - 반 번호 성별 이름 총점 </p>
+      <p>*필수존재항목 - 반 번호 성별 생년월일 이름 총점 비고 협동</p>
+      <p>*필수입력항목 - 반 번호 성별 생년월일 이름 총점 </p>
       <div className={classes["fileUpload"]}>
         <label className={classes["excelLabel"]} htmlFor="excelFileInput">
           엑셀파일 업로드
