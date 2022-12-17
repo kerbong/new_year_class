@@ -50,6 +50,7 @@ function App() {
   const [divided, setDivided] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
   const [hanglOrNum, setHanglOrNum] = useState(0);
+  const [conGenderRate, setConGenderRate] = useState(true);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -113,31 +114,75 @@ function App() {
     classStudents?.forEach((cl, cl_index) => {
       // console.log(cl);
       let go_forward = true;
-      cl.forEach((student, index) => {
-        //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
-        let clNum = +((index + cl_index) % nextYearClass);
-        if (go_forward) {
-          // console.log("index" + index);
-          // console.log("cl_index" + cl_index);
-          // console.log("clNum" + clNum);
-          nextWholeClass[clNum].push(student);
-        } else {
-          nextWholeClass[nextYearClass - 1 - clNum].push(student);
-        }
-        //만약 ㄹ자 방식인 경우 방향 바꾸기
-        if (divideType === "way1") {
-          //만약 방향이 바뀌는 학생(인덱스 나머지가 학급수-1과 같아지지면) 차례가 되면 방향 바꾸기
-          if (
-            cl.length - +index > nextYearClass &&
-            nextYearClass - 1 === +clNum
-          ) {
-            console.log(go_forward);
-            go_forward = !go_forward;
-            console.log(go_forward);
+
+      if (!conGenderRate) {
+        cl.forEach((student, index) => {
+          //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
+          let clNum = +((index + cl_index) % nextYearClass);
+          if (go_forward) {
+            nextWholeClass[clNum].push(student);
+          } else {
+            nextWholeClass[nextYearClass - 1 - clNum].push(student);
           }
-        }
-      });
+          //만약 ㄹ자 방식인 경우 방향 바꾸기
+          if (divideType === "way1") {
+            //만약 방향이 바뀌는 학생(인덱스 나머지가 학급수-1과 같아지지면) 차례가 되면 방향 바꾸기
+            if (
+              cl.length - +index > nextYearClass &&
+              nextYearClass - 1 === +clNum
+            ) {
+              console.log(go_forward);
+              go_forward = !go_forward;
+              console.log(go_forward);
+            }
+          }
+        });
+      } else {
+        let male = cl.filter((stu) => stu.gender === "남");
+        console.log(male);
+        let female = cl.filter((stu) => stu.gender === "여");
+        console.log(female);
+        male.forEach((student, index) => {
+          //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
+          let clNum = +((index + cl_index) % nextYearClass);
+          if (go_forward) {
+            nextWholeClass[clNum].push(student);
+          } else {
+            nextWholeClass[nextYearClass - 1 - clNum].push(student);
+          }
+          //만약 ㄹ자 방식인 경우 방향 바꾸기
+          if (divideType === "way1") {
+            //만약 방향이 바뀌는 학생(인덱스 나머지가 학급수-1과 같아지지면) 차례가 되면 방향 바꾸기
+            if (
+              cl.length - +index > nextYearClass &&
+              nextYearClass - 1 === +clNum
+            ) {
+              go_forward = !go_forward;
+            }
+          }
+        });
+        female.forEach((student, index) => {
+          //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
+          let clNum = +((index + cl_index) % nextYearClass);
+          if (go_forward) {
+            nextWholeClass[clNum].push(student);
+          } else {
+            nextWholeClass[nextYearClass - 1 - clNum].push(student);
+          }
+          //만약 ㄹ자 방식인 경우 방향 바꾸기
+          if (divideType === "way1") {
+            //만약 방향이 바뀌는 학생(인덱스 나머지가 학급수-1과 같아지지면) 차례가 되면 방향 바꾸기
+            if (
+              cl.length - +index > nextYearClass &&
+              nextYearClass - 1 === +clNum
+            ) {
+              go_forward = !go_forward;
+            }
+          }
+        });
+      }
     });
+
     const new_wholeClass = orderByGenderName(nextWholeClass, firstMale);
 
     setNextOriginClass(JSON.parse(JSON.stringify(new_wholeClass)));
@@ -422,6 +467,7 @@ function App() {
                   남자 앞번호
                 </button>
               </div>
+
               {/* 학급명 가나다 or 123 */}
               <div className={classes["btnGroup-div"]}>
                 <button
@@ -445,6 +491,30 @@ function App() {
                   onClick={() => setHanglOrNum(1)}
                 >
                   숫자반명(123..)
+                </button>
+              </div>
+
+              {/* 남여비율 고려 */}
+              <div className={classes["btnGroup-div"]}>
+                <button
+                  className={
+                    conGenderRate
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setConGenderRate(true)}
+                >
+                  성비 고려
+                </button>
+                <button
+                  className={
+                    !conGenderRate
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setConGenderRate(false)}
+                >
+                  성적 우선
                 </button>
               </div>
             </div>
