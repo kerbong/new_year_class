@@ -137,6 +137,7 @@ function App() {
             }
           }
         });
+        //성비고려 옵션인 경우
       } else {
         let male = cl.filter((stu) => stu.gender === "남");
         // console.log(male);
@@ -162,8 +163,8 @@ function App() {
           }
         });
         female.forEach((student, index) => {
-          //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
-          let clNum = +((index + cl_index) % nextYearClass);
+          //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 나반에 1등부터, 2반은 내년 다반 1등부터...)
+          let clNum = +((index + cl_index + 1) % nextYearClass);
           if (go_forward) {
             nextWholeClass[clNum].push(student);
           } else {
