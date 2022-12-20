@@ -50,7 +50,7 @@ function App() {
   const [divided, setDivided] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
   const [hanglOrNum, setHanglOrNum] = useState(0);
-  const [conGenderRate, setConGenderRate] = useState(true);
+  const [conGenderRate, setConGenderRate] = useState(false);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -139,9 +139,9 @@ function App() {
         });
       } else {
         let male = cl.filter((stu) => stu.gender === "남");
-        console.log(male);
+        // console.log(male);
         let female = cl.filter((stu) => stu.gender === "여");
-        console.log(female);
+        // console.log(female);
         male.forEach((student, index) => {
           //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
           let clNum = +((index + cl_index) % nextYearClass);
@@ -498,16 +498,6 @@ function App() {
               <div className={classes["btnGroup-div"]}>
                 <button
                   className={
-                    conGenderRate
-                      ? classes["clickedBtn"]
-                      : classes["nonClickedBtn"]
-                  }
-                  onClick={() => setConGenderRate(true)}
-                >
-                  성비 고려
-                </button>
-                <button
-                  className={
                     !conGenderRate
                       ? classes["clickedBtn"]
                       : classes["nonClickedBtn"]
@@ -515,6 +505,16 @@ function App() {
                   onClick={() => setConGenderRate(false)}
                 >
                   성적 우선
+                </button>
+                <button
+                  className={
+                    conGenderRate
+                      ? classes["clickedBtn"]
+                      : classes["nonClickedBtn"]
+                  }
+                  onClick={() => setConGenderRate(true)}
+                >
+                  성비 고려
                 </button>
               </div>
             </div>
