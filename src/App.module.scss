@@ -189,3 +189,45 @@
   display: flex;
   justify-content: center;
 }
+
+.cl1,
+.cl2,
+.cl3,
+.cl4,
+.cl5,
+.cl6 {
+  padding: 5px 10px;
+  border-radius: 15px;
+  margin: 5px 10px;
+}
+
+.cl1 {
+  background-color: rgb(235, 135, 135);
+}
+.cl2 {
+  background-color: rgb(235, 210, 135);
+}
+.cl3 {
+  background-color: rgb(138, 235, 135);
+}
+.cl4 {
+  background-color: rgb(135, 235, 233);
+}
+.cl5 {
+  background-color: rgb(135, 160, 235);
+}
+.cl6 {
+  background-color: rgb(232, 135, 235);
+}
+
+.reason-li {
+  margin: 10px;
+  list-style: none;
+}
+.reason-div {
+  display: flex;
+  flex-direction: column;
+  margin: 20px;
+  align-items: flex-start;
+  width: 90%;
+}

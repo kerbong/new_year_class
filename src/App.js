@@ -51,6 +51,7 @@ function App() {
   const [showExplain, setShowExplain] = useState(false);
   const [hanglOrNum, setHanglOrNum] = useState(0);
   const [conGenderRate, setConGenderRate] = useState(false);
+  const [reason, setReason] = useState([]);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -109,16 +110,18 @@ function App() {
       nextWholeClass.push([]);
     }
     // console.log(nextWholeClass);
+    // console.log(classStudents);
 
     //현재 학급 자료로 배정 시작하기
     classStudents?.forEach((cl, cl_index) => {
       // console.log(cl);
       let go_forward = true;
 
+      //남여성비고려가 아니라 총점순으로만 배정하면
       if (!conGenderRate) {
-        cl.forEach((student, index) => {
+        cl.forEach((student, stu_index) => {
           //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 1반 1등부터, 2반은 내년 2반 1등부터...)
-          let clNum = +((index + cl_index) % nextYearClass);
+          let clNum = +((stu_index + cl_index) % nextYearClass);
           if (go_forward) {
             nextWholeClass[clNum].push(student);
           } else {
@@ -128,9 +131,13 @@ function App() {
           if (divideType === "way1") {
             //만약 방향이 바뀌는 학생(인덱스 나머지가 학급수-1과 같아지지면) 차례가 되면 방향 바꾸기
             if (
-              cl.length - +index > nextYearClass &&
-              nextYearClass - 1 === +clNum
+              //전체 학생수 - 학생인덱스가 내년 학급수보다 크면
+              // cl.length - +stu_index > nextYearClass &&
+              nextYearClass - 1 ===
+              +clNum
             ) {
+              console.log(cl.length);
+              console.log(+stu_index);
               console.log(go_forward);
               go_forward = !go_forward;
               console.log(go_forward);
@@ -155,8 +162,9 @@ function App() {
           if (divideType === "way1") {
             //만약 방향이 바뀌는 학생(인덱스 나머지가 학급수-1과 같아지지면) 차례가 되면 방향 바꾸기
             if (
-              cl.length - +index > nextYearClass &&
-              nextYearClass - 1 === +clNum
+              // cl.length - +index > nextYearClass &&
+              nextYearClass - 1 ===
+              +clNum
             ) {
               go_forward = !go_forward;
             }
@@ -165,6 +173,7 @@ function App() {
         female.forEach((student, index) => {
           //학생인덱스+ 학급인덱스 / 학급수의 나머지 (1반은 내년 나반에 1등부터, 2반은 내년 다반 1등부터...)
           let clNum = +((index + cl_index + 1) % nextYearClass);
+
           if (go_forward) {
             nextWholeClass[clNum].push(student);
           } else {
@@ -654,8 +663,16 @@ function App() {
                       } ${
                         stu.note === "특수반" ? classes["specialStudent"] : ""
                       }`}
+                      // className={`${classes["newClass-li"]} ${
+                      //   stu.teamWork === 1 ? classes["cl1"] : ""
+                      // } ${stu.teamWork === 2 ? classes["cl2"] : ""} ${
+                      //   stu.teamWork === 3 ? classes["cl3"] : ""
+                      // } ${stu.teamWork === 4 ? classes["cl4"] : ""} ${
+                      //   stu.teamWork === 5 ? classes["cl5"] : ""
+                      // } ${stu.teamWork === 6 ? classes["cl6"] : ""}`}
                       key={stu.exClass + stu.name}
                       onClick={(e) => {
+                        const currentT = e.currentTarget;
                         // 클릭된 학생이 없었으면 템프에 추가해두고 테두리 진하게!
 
                         if (Object.keys(tempStudent).length === 0) {
@@ -666,7 +683,7 @@ function App() {
                           });
 
                           // 테두리 점선으로 파랗게
-                          e.currentTarget.style.border = "dashed #2771df";
+                          currentT.style.border = "dashed #2771df";
 
                           //같은 학생을 클릭하면 초기화
                         } else if (
@@ -674,27 +691,80 @@ function App() {
                           tempStudent.num === stu.num
                         ) {
                           setTempStudent("");
-                          e.currentTarget.style.border = "";
+                          currentT.style.border = "";
                           //다른 학생을 클릭하면 두 학생 바꾸기
                         } else {
                           // 테두리 점선으로 파랗게
-                          e.currentTarget.style.border = "dashed #2771df";
-                          //클릭된 학생이 있었으면 전체 학생 목록에서 현재 학생 자료를 찾아서 temp 자료와 바꾸기
-                          let new_AdaptClass = [...nextAdaptClass];
+                          currentT.style.border = "dashed #2771df";
 
-                          //임시학생의 자리에 현재 학생의 정보를 넣고
-                          new_AdaptClass[tempStudent.next_cl_index][
-                            tempStudent.next_stu_index
-                          ] = { ...stu };
+                          //바꾸는 이유 등록하기
+                          Swal.fire({
+                            title: "학생을 바꾸는 이유를 작성해주세요.",
+                            input: "textarea",
+                            inputAttributes: {
+                              autocapitalize: "off",
+                              maxlength: 100,
+                            },
+                            background: "#ffffffe0",
+                            showCancelButton: true,
+                            cancelButtonText: "취소",
+                            confirmButtonText: "저장",
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              //빈칸은 저장불가
+                              if (result.value.trim() === "") {
+                                // 테두리 점선으로 파랗게
+                                currentT.style.border = "";
+                                Swal.fire({
+                                  icon: "error",
+                                  title: "저장불가",
+                                  text: "빈 내용을 저장할 수 없어요. 내용을 확인해주세요!",
+                                });
 
-                          //현재학생의 자리에 임시학생의 정보를 넣기
-                          new_AdaptClass[index][stu_index] = {
-                            ...tempStudent,
-                          };
-                          setTimeout(() => {
-                            setNextAdaptClass([...new_AdaptClass]);
-                            setTempStudent("");
-                          }, 2000);
+                                return;
+                              }
+
+                              const stu_data = {
+                                student1_name: tempStudent.name,
+                                student1_exClass: tempStudent.exClass,
+                                student1_classFromIndex:
+                                  tempStudent.next_cl_index,
+                                student1_classToIndex: index,
+                                student2_name: stu.name,
+                                student2_exClass: stu.exClass,
+                                student2_classFromIndex: index,
+                                student2_classToIndex:
+                                  tempStudent.next_cl_index,
+                                change_reason: result.value,
+                              };
+                              // console.log(stu_data);
+                              setReason((prev) => [...prev, { ...stu_data }]);
+
+                              // console.log(reason);
+
+                              //클릭된 학생이 있었으면 전체 학생 목록에서 현재 학생 자료를 찾아서 temp 자료와 바꾸기
+                              let new_AdaptClass = [...nextAdaptClass];
+
+                              //임시학생의 자리에 현재 학생의 정보를 넣고
+                              new_AdaptClass[tempStudent.next_cl_index][
+                                tempStudent.next_stu_index
+                              ] = { ...stu };
+
+                              //현재학생의 자리에 임시학생의 정보를 넣기
+                              new_AdaptClass[index][stu_index] = {
+                                ...tempStudent,
+                              };
+
+                              setTimeout(() => {
+                                setNextAdaptClass([...new_AdaptClass]);
+                                setTempStudent("");
+                              }, 2000);
+                            } else {
+                              // 테두리 점선으로 파랗게
+                              currentT.style.border = "";
+                              return;
+                            }
+                          });
                         }
                       }}
                     >
@@ -744,6 +814,28 @@ function App() {
           </div>
         </>
       )}
+
+      {reason?.length > 0 && (
+        <div className={classes["reason-div"]}>
+          {" "}
+          {reason?.map((data, index) => (
+            <li key={"reason" + index} className={classes["reason-li"]}>
+              <span className={classes["cl2"]}>
+                {data.student1_name}(작년 {data.student1_exClass}반)
+              </span>
+              내년 {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 =>
+              내년 {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반 |{" "}
+              <span className={classes["cl1"]}>
+                {data.student2_name}(작년 {data.student2_exClass}반)
+              </span>{" "}
+              내년 {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반 =>
+              내년 {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반 |
+              <span className={classes["cl5"]}>{data.change_reason}</span>
+            </li>
+          ))}{" "}
+        </div>
+      )}
+
       <footer className={classes["footer"]}>
         by 말랑한거봉🍇 kerbong@gmail.com
       </footer>
