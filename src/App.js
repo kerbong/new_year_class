@@ -755,10 +755,10 @@ function App() {
                                 ...tempStudent,
                               };
 
-                              setTimeout(() => {
-                                setNextAdaptClass([...new_AdaptClass]);
-                                setTempStudent("");
-                              }, 2000);
+                              // setTimeout(() => {
+                              setNextAdaptClass([...new_AdaptClass]);
+                              setTempStudent("");
+                              // }, 2000);
                             } else {
                               // 테두리 점선으로 파랗게
                               currentT.style.border = "";
