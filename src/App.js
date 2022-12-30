@@ -285,21 +285,64 @@ function App() {
         return;
       }
 
-      //임시학생의 자리를 비우고
-      new_AdaptClass[tempStudent.next_cl_index].splice(
-        tempStudent.next_stu_index,
-        1
-      );
+      //바꾸는 이유 등록하기
+      Swal.fire({
+        title: "학생을 바꾸는 이유를 작성해주세요.",
+        input: "textarea",
+        inputAttributes: {
+          autocapitalize: "off",
+          maxlength: 100,
+        },
+        background: "#ffffffe0",
+        showCancelButton: true,
+        cancelButtonText: "취소",
+        confirmButtonText: "저장",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          //빈칸은 저장불가
+          if (result.value.trim() === "") {
+            Swal.fire({
+              icon: "error",
+              title: "저장불가",
+              text: "빈 내용을 저장할 수 없어요. 내용을 확인해주세요!",
+            });
 
-      //임시학생을 현재 반으로 넣어주기
-      const student_data = { ...tempStudent };
-      delete student_data.next_cl_index;
-      delete student_data.next_stu_index;
+            return;
+          }
 
-      new_AdaptClass[class_index].push(student_data);
+          const stu_data = {
+            change_or_put: "put",
+            student1_name: tempStudent.name,
+            student1_exClass: tempStudent.exClass,
+            student1_classFromIndex: tempStudent.next_cl_index,
+            student1_classToIndex: class_index,
+            student2_name: "",
+            student2_exClass: "",
+            student2_classFromIndex: "",
+            student2_classToIndex: "",
+            change_reason: result.value,
+          };
+          console.log(stu_data);
+          setReason((prev) => [...prev, { ...stu_data }]);
 
-      setNextAdaptClass([...new_AdaptClass]);
-      setTempStudent("");
+          // console.log(reason);
+          //임시학생의 자리를 비우고
+          new_AdaptClass[tempStudent.next_cl_index].splice(
+            tempStudent.next_stu_index,
+            1
+          );
+
+          //임시학생을 현재 반으로 넣어주기
+          const student_data = { ...tempStudent };
+          delete student_data.next_cl_index;
+          delete student_data.next_stu_index;
+
+          new_AdaptClass[class_index].push(student_data);
+
+          setNextAdaptClass([...new_AdaptClass]);
+          setTempStudent("");
+        }
+      });
     }
   };
 
@@ -725,6 +768,7 @@ function App() {
                               }
 
                               const stu_data = {
+                                change_or_put: "change",
                                 student1_name: tempStudent.name,
                                 student1_exClass: tempStudent.exClass,
                                 student1_classFromIndex:
@@ -820,16 +864,24 @@ function App() {
           {" "}
           {reason?.map((data, index) => (
             <li key={"reason" + index} className={classes["reason-li"]}>
+              {/* 바꾼 1번 학생 보여주기 */}
               <span className={classes["cl2"]}>
                 {data.student1_name}(작년 {data.student1_exClass}반)
               </span>
               내년 {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 =>
               내년 {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반 |{" "}
-              <span className={classes["cl1"]}>
-                {data.student2_name}(작년 {data.student2_exClass}반)
-              </span>{" "}
-              내년 {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반 =>
-              내년 {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반 |
+              {/* 교환인 학생만 2번 학생도 보여줌 */}
+              {data.change_or_put === "change" && (
+                <>
+                  <span className={classes["cl1"]}>
+                    {data.student2_name}(작년 {data.student2_exClass}반)
+                  </span>{" "}
+                  내년 {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반
+                  => 내년 {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반
+                  |
+                </>
+              )}
+              {/* 바꾼 이유 보여주기 */}
               <span className={classes["cl5"]}>{data.change_reason}</span>
             </li>
           ))}{" "}
