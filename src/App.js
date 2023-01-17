@@ -29,12 +29,14 @@ const EXPLAINS = [
   "* 브라우저 확대/축소 (Ctrl+마우스휠) 로 한 눈에 보이도록 설정한 후 사용하세요.",
   "* 이름 / 이전반 / 성별 / 점수 / 비고 순서로 보여집니다.",
   "* 초기화 버튼을 누르면 처음 반배정되었던 상태로 되돌아갑니다.",
+  "* 사이트를 새로고침 하실 경우 작업 중이던 자료가 사라집니다.",
   "* 중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은학생이 있는지 확인해서 빨간색으로 표시합니다.",
   "* 남자 앞번호 / 여자 앞번호 / 혼성번호 버튼을 누르면 현재 상태에서 성별을 기준으로 정렬됩니다.",
   "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 2초 후에 학급이 이동됩니다.",
   "* 학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로 이동됩니다.",
   "* 비고가 '전출'인 학생은 정렬에 상관없이 가장 뒤로 배치됩니다.",
   "* 엑셀파일로 저장하시면, 나이스 업로드용 / 교사용 명렬표 두 가지 엑셀파일이 저장됩니다.",
+  "* 다음에 분반을 이어하실 경우 저장된 엑셀 파일 중 교사용 명렬표 파일을 업로드 해주세요.",
   "* 다른 자료로 배정하시려면 사이트를 새로고침(F5) 해주세요.",
   "* 학생들의 정보와 관련된 책임은 사용자에게 있습니다.",
 ];
@@ -136,11 +138,11 @@ function App() {
               nextYearClass - 1 ===
               +clNum
             ) {
-              console.log(cl.length);
-              console.log(+stu_index);
-              console.log(go_forward);
+              // console.log(cl.length);
+              // console.log(+stu_index);
+              // console.log(go_forward);
               go_forward = !go_forward;
-              console.log(go_forward);
+              // console.log(go_forward);
             }
           }
         });
@@ -405,10 +407,11 @@ function App() {
         "학년",
         "반",
         "번호 ",
-        "성명",
+        "이름",
         "성별",
         "생년월일",
         "이전반",
+        "총점",
         "비고",
         "협동",
       ]);
@@ -421,6 +424,7 @@ function App() {
           stu.gender,
           stu.birthday,
           stu.exClass,
+          stu.score,
           stu.note || "",
           stu.teamWork || "",
         ]);
@@ -429,11 +433,12 @@ function App() {
       sheetData2["!cols"] = [
         { wpx: 40 }, // 진급학년
         { wpx: 40 }, // 진급반
-        { wpx: 40 }, // 진급번호
-        { wpx: 80 }, // 성명
+        { wpx: 30 }, // 진급번호
+        { wpx: 60 }, // 이름
         { wpx: 40 }, // 성별
-        { wpx: 80 }, // 생년월일
+        { wpx: 70 }, // 생년월일
         { wpx: 50 }, // 이전반
+        { wpx: 30 }, // 총점
         { wpx: 60 }, // 비고
         { wpx: 40 }, // 협동
       ];
@@ -458,8 +463,13 @@ function App() {
       {classStudents?.length === 0 && (
         <>
           <ExcelUploader
-            setStudents={(students) => {
+            setStudents={(students, isNew) => {
               setClassStudents([...students]);
+              if (!isNew) {
+                setNextOriginClass([...students]);
+                setNextAdaptClass([...students]);
+                setDivided(true);
+              }
             }}
           />
         </>
@@ -868,8 +878,8 @@ function App() {
               <span className={classes["cl2"]}>
                 {data.student1_name}(작년 {data.student1_exClass}반)
               </span>
-              내년 {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 =>
-              내년 {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반 |{" "}
+              내년 {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 👉
+              내년 {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반{" "}
               {/* 교환인 학생만 2번 학생도 보여줌 */}
               {data.change_or_put === "change" && (
                 <>
@@ -877,8 +887,7 @@ function App() {
                     {data.student2_name}(작년 {data.student2_exClass}반)
                   </span>{" "}
                   내년 {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반
-                  => 내년 {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반
-                  |
+                  👉 내년 {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반
                 </>
               )}
               {/* 바꾼 이유 보여주기 */}

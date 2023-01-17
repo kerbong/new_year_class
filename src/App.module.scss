@@ -122,6 +122,8 @@
 }
 
 .fileUpload .excelLabel {
+  margin: 20px;
+
   display: inline-block;
   padding: 0.5em 0.75em;
   color: #e3e2e2;
@@ -151,6 +153,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  line-height: 1.5;
 }
 .explainSpan {
   margin: 10px;
@@ -203,6 +206,7 @@
 
 .cl1 {
   background-color: rgb(235, 135, 135);
+  margin-left: 30px;
 }
 .cl2 {
   background-color: rgb(235, 210, 135);
@@ -215,6 +219,7 @@
 }
 .cl5 {
   background-color: rgb(135, 160, 235);
+  margin-left: 30px;
 }
 .cl6 {
   background-color: rgb(232, 135, 235);
@@ -230,4 +235,12 @@
   margin: 20px;
   align-items: flex-start;
   width: 90%;
+}
+
+.how-to-use {
+  margin: 30px;
+  padding: 50px;
+  background-color: #5f9ea059;
+  border-radius: 20px;
+  line-height: 2;
 }
