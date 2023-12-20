@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { utils, writeFile } from "xlsx";
 import Swal from "sweetalert2";
-import classes from "./App.module.scss";
+import classes from "./App.module.css";
 import ExcelUploader from "./component/ExcelUploader";
 
 // 총 14반까지만 가능..
@@ -35,6 +35,7 @@ const EXPLAINS = [
   "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 이유를 입력하면 학급이 교체됩니다.",
   "* 학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로 이동됩니다.",
   "* 비고가 '전출'인 학생은 정렬에 상관없이 가장 뒤로 배치됩니다.",
+  "* 비고의 내용이 길어서 보기가 불편한 경우(🚩표시), '비고 펼치기 | 줄이기' 버튼을 활용해주세요.",
   "* 엑셀파일로 저장하시면, 나이스 업로드용 / 교사용 명렬표 두 가지 엑셀파일이 저장됩니다.",
   "* 다음에 분반을 이어하실 경우 저장된 엑셀 파일 중 교사용 명렬표 파일을 업로드 해주세요.",
   "* 다른 자료로 배정하시려면 사이트를 새로고침(F5) 해주세요.",
@@ -54,6 +55,7 @@ function App() {
   const [hanglOrNum, setHanglOrNum] = useState(0);
   const [conGenderRate, setConGenderRate] = useState(false);
   const [reason, setReason] = useState([]);
+  const [noteSummary, setNoteSummary] = useState(false);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -458,6 +460,13 @@ function App() {
     writeFile(book2, `${yearGrade} 학급편성자료(명렬표).xlsx`);
   };
 
+  function truncateString(str, maxLength) {
+    if (!noteSummary && str.length > maxLength) {
+      return "🚩" + str.substring(0, maxLength) + "...";
+    }
+    return str;
+  }
+
   return (
     <div className={classes["App"]}>
       {/* localStorage에 학생정보가 없으면...엑셀업로드화면 보여주기 */}
@@ -640,6 +649,13 @@ function App() {
               onClick={() => setShowExplain((prev) => !prev)}
             >
               {showExplain ? "설명숨기기" : "설명보기"}
+            </button>
+            <button
+              className={classes["settingBtn"]}
+              onClick={() => setNoteSummary((prev) => !prev)}
+              title={"비고의 내용이 긴 경우 줄이거나, 모두 보이도록 펼쳐주기"}
+            >
+              {noteSummary ? "비고 줄이기" : "비고 펼치기"}
             </button>
             <button className={classes["settingBtn"]} onClick={originReset}>
               초기화
@@ -836,8 +852,11 @@ function App() {
                       <span className={classes["newClassSpan-score"]}>
                         {stu.score}
                       </span>
-                      <span className={classes["newClassSpan-note"]}>
-                        {stu.note}
+                      <span
+                        className={classes["newClassSpan-note"]}
+                        title={stu.note?.length > 4 ? stu.note : ""}
+                      >
+                        {truncateString(stu.note, 4)}
                       </span>
                     </li>
                   ))}
@@ -893,9 +912,7 @@ function App() {
                 </>
               )}
               {/* 바꾼 이유 보여주기 */}
-              <span className={classes["cl5"]}>
-                교체 이유: {data.change_reason}
-              </span>
+              <span className={classes["cl5"]}>{data.change_reason}</span>
             </li>
           ))}{" "}
         </div>

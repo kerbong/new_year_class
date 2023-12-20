@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import classes from "../App.module.scss";
+import classes from "../App.module.css";
 import { read, utils } from "xlsx";
 import Swal from "sweetalert2";
 

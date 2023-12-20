@@ -4,7 +4,10 @@
   flex-direction: column;
   align-items: center;
 }
-@mixin btn {
+.btn,
+.nonClickedBtn,
+.settingBtn,
+.clickedBtn {
   padding: 20px;
   background-color: rgb(183, 140, 182);
   font-size: 1.2rem;
@@ -14,35 +17,27 @@
   margin: 20px;
 }
 
-.nonClickedBtn {
-  @include btn;
-}
 .settingBtn {
-  @include btn;
   padding: 10px;
   font-size: 1.2rem;
 }
 
 .clickedBtn {
-  @include btn;
   font-size: 1.6rem;
   padding: 30px;
   font-weight: bold;
 }
 
-@mixin class_input {
+.class_input,
+.classInput,
+.yearInput {
   padding: 20px;
   font-size: 3rem;
   text-align: center;
   width: 60px;
 }
 
-.classInput {
-  @include class_input;
-}
-
 .yearInput {
-  @include class_input;
   width: 120px;
 }
 
@@ -75,6 +70,8 @@
   margin: 3px 0;
   padding: 3px 0;
   background-color: inherit;
+  display: flex;
+  align-items: center;
 }
 .dupli-stu-bg {
   background-color: red;
@@ -92,6 +89,14 @@
 .newClassSpan-exClass,
 .newClassSpan-score {
   flex-basis: 12%;
+}
+
+.newClassSpan-note {
+  flex-basis: 29%;
+  font-size: 13px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .goodStudent {
@@ -228,13 +233,16 @@
 .reason-li {
   margin: 10px;
   list-style: none;
+  margin-right: 50px;
 }
 .reason-div {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   margin: 20px;
-  align-items: flex-start;
-  width: 90%;
+  align-items: center;
+  width: 95%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .how-to-use {
