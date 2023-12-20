@@ -32,7 +32,7 @@ const EXPLAINS = [
   "* 사이트를 새로고침 하실 경우 작업 중이던 자료가 사라집니다.",
   "* 중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은학생이 있는지 확인해서 빨간색으로 표시합니다.",
   "* 남자 앞번호 / 여자 앞번호 / 혼성번호 버튼을 누르면 현재 상태에서 성별을 기준으로 정렬됩니다.",
-  "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 2초 후에 학급이 이동됩니다.",
+  "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 이유를 입력하면 학급이 교체됩니다.",
   "* 학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로 이동됩니다.",
   "* 비고가 '전출'인 학생은 정렬에 상관없이 가장 뒤로 배치됩니다.",
   "* 엑셀파일로 저장하시면, 나이스 업로드용 / 교사용 명렬표 두 가지 엑셀파일이 저장됩니다.",
@@ -238,6 +238,8 @@ function App() {
   const originReset = () => {
     const resetOriginState = () => {
       setNextAdaptClass([...JSON.parse(JSON.stringify(nextOriginClass))]);
+      // 이유들도 초기화...
+      setReason([]);
     };
 
     Swal.fire({
@@ -878,20 +880,22 @@ function App() {
               <span className={classes["cl2"]}>
                 {data.student1_name}(작년 {data.student1_exClass}반)
               </span>
-              내년 {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 👉
-              내년 {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반{" "}
+              {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 👉
+              {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반{" "}
               {/* 교환인 학생만 2번 학생도 보여줌 */}
               {data.change_or_put === "change" && (
                 <>
                   <span className={classes["cl1"]}>
                     {data.student2_name}(작년 {data.student2_exClass}반)
                   </span>{" "}
-                  내년 {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반
-                  👉 내년 {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반
+                  {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반 👉{" "}
+                  {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반
                 </>
               )}
               {/* 바꾼 이유 보여주기 */}
-              <span className={classes["cl5"]}>{data.change_reason}</span>
+              <span className={classes["cl5"]}>
+                교체 이유: {data.change_reason}
+              </span>
             </li>
           ))}{" "}
         </div>

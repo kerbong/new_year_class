@@ -23,8 +23,8 @@ const ExcelUploader = (props) => {
       let reader = new FileReader();
       let isBig = false;
       reader.onprogress = (e) => {
-        //엑셀파일 크기가 100KB이상이면(20반이상;)
-        if (e.total > 100000) {
+        //엑셀파일 크기가 500KB이상이면(20반이상;)
+        if (e.total > 500000) {
           isBig = true;
         }
       };
@@ -74,11 +74,11 @@ const ExcelUploader = (props) => {
                 rows.forEach((row) => {
                   new_rows.push({
                     exClass: +row["이전반"],
-                    birthday: +row["생년월일"],
-                    num: +row["번호"],
+                    birthday: +row["생년월일"] || "-",
+                    num: +row["번호"] || "-",
                     gender: row["성별"],
                     name: row["이름"],
-                    score: +row["총점"],
+                    score: +row["총점"] || "-",
                     note: row["비고"] || "",
                     teamWork: row["협동"] || "",
                   });
@@ -129,7 +129,7 @@ const ExcelUploader = (props) => {
           <p>3. 누락된 줄 없이 자료 입력하기</p>
           <p>* 사이트 새로고침 시 정보가 사라져요!</p>
           <p>
-            <a href="https://drive.google.com/uc?export=download&id=1K8n8-7tZF3oVZyRx-vykKOXv3UcwLHCr">
+            <a href="https://docs.google.com/spreadsheets/d/1tdHVIke3tlak2xCvIV_GAj0UcRRSIjjZ/edit?usp=share_link&ouid=105506373897967517533&rtpof=true&sd=true">
               양식파일 다운
             </a>
           </p>
