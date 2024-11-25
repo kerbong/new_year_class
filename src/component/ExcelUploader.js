@@ -6,19 +6,26 @@ import Swal from "sweetalert2";
 const ExcelUploader = (props) => {
   const [classStudents, setClassStudents] = useState([]);
   const [isNew, setIsNew] = useState(true);
+  const [yearGr, setYearGr] = useState("");
 
   const fileInfoInput = useRef(null);
   const savedInfoInput = useRef(null);
 
   useEffect(() => {
     //학생정보 배열 App으로 보내기
-    props.setStudents(classStudents, isNew);
+
+    props.setStudents(classStudents, isNew, yearGr);
     setIsNew(true);
   }, [classStudents]);
 
   const excelFileHandler = (e, isNew) => {
     let input = e.target;
     let class_students = [];
+
+    const getFileName = (file) => {
+      return file.name;
+    };
+
     if (input.files[0] !== undefined) {
       let reader = new FileReader();
       let isBig = false;
@@ -45,7 +52,7 @@ const ExcelUploader = (props) => {
                 rows.forEach((row) => {
                   new_rows.push({
                     exClass: +row["반"],
-                    birthday: +row["생년월일"],
+                    birthday: row["생년월일"],
                     num: +row["번호"],
                     gender: row["성별"],
                     name: row["이름"],
@@ -65,6 +72,11 @@ const ExcelUploader = (props) => {
               // 기존 자료를 이어서 할 경우
             } else {
               //기존 자료면 상태 바꾸기
+              let fileName = getFileName(input.files[0]);
+
+              let yG = fileName.split(" 학급편성자료")[0];
+              setYearGr(yG);
+
               setIsNew(false);
               //시트 각각을 작업하기
               workBook.SheetNames.forEach((sheetName) => {
@@ -72,10 +84,12 @@ const ExcelUploader = (props) => {
                 let rows = [...utils.sheet_to_json(workBook.Sheets[sheetName])];
                 let new_rows = [];
                 rows.forEach((row) => {
+                  //이름이 없는, 잘못된 줄은 제거
+                  if (!row["이름"]) return;
                   new_rows.push({
                     exClass: +row["이전반"],
-                    birthday: +row["생년월일"] || "-",
-                    num: +row["번호"] || "-",
+                    birthday: row["생년월일"] || "-",
+                    num: +row["이전번호"] || "-",
                     gender: row["성별"],
                     name: row["이름"],
                     score: +row["총점"] || "-",
@@ -129,7 +143,7 @@ const ExcelUploader = (props) => {
           <p>3. 누락된 줄 없이 자료 입력하기</p>
           <p>* 사이트 새로고침 시 정보가 사라져요!</p>
           <p>
-            <a href="https://docs.google.com/spreadsheets/d/1tdHVIke3tlak2xCvIV_GAj0UcRRSIjjZ/edit?usp=share_link&ouid=105506373897967517533&rtpof=true&sd=true">
+            <a href="https://drive.google.com/uc?export=download&id=1K8n8-7tZF3oVZyRx-vykKOXv3UcwLHCr">
               양식파일 다운
             </a>
           </p>

@@ -67,11 +67,12 @@
 
 .newClass-li {
   height: 20px;
-  margin: 3px 0;
-  padding: 3px 0;
+
+  padding: 0.5px 0;
   background-color: inherit;
   display: flex;
   align-items: center;
+  border-top: 0.1px solid;
 }
 .dupli-stu-bg {
   background-color: red;
@@ -97,6 +98,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.grayBack {
+  background-color: #e7e7e7;
 }
 
 .goodStudent {

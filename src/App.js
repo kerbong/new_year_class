@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { utils, writeFile } from "xlsx";
 import Swal from "sweetalert2";
 import classes from "./App.module.css";
@@ -56,6 +56,10 @@ function App() {
   const [conGenderRate, setConGenderRate] = useState(false);
   const [reason, setReason] = useState([]);
   const [noteSummary, setNoteSummary] = useState(false);
+  const [exClassData, setExClassData] = useState([]);
+  const [exClassNames, setExClassNames] = useState([]);
+  const [checkDupliName, setCheckDupliName] = useState(false);
+  const [orderOriginClass, setOrderOriginClass] = useState(false);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -64,6 +68,91 @@ function App() {
   //분반방식 버튼 누르면 id를 state에 저장하고 이를 바탕으로 btn css속성 다르게 설정함.
   const divideTypeHandler = (e) => {
     setDivideType(e.target.id);
+  };
+
+  /** 현재학급 기준으로 학생들을 정렬하는 함수 */
+  const orderByClassHandler = () => {
+    //현재학급 기준 정렬상태였으면... 이름기준 정렬로 다시 원상복귀
+    //새로운 학급 기준으로 보려면
+    if (orderOriginClass) {
+      // nextClass 기준으로 데이터를 그룹화
+      const groupedByNextClass = nextAdaptClass
+        .flat() // 모든 학급 데이터를 하나의 배열로 합침
+        .reduce((acc, student) => {
+          // nextClass 기준으로 그룹화
+          const key = student.nextClass;
+          if (!acc[key]) {
+            acc[key] = [];
+          }
+          acc[key].push(student);
+          return acc;
+        }, {});
+
+      // 결과를 배열 형태로 변환
+      const groupedArray = Object.values(groupedByNextClass);
+
+      console.log(groupedArray);
+      setNextAdaptClass(groupedArray);
+
+      // let new_AdaptClass = [...nextAdaptClass];
+      // let new_nextClassData = [];
+      // let new_nextClassNames = [];
+
+      // //내년학급 이름 모으기
+      // new_AdaptClass.forEach((next_cl) => {
+      //   next_cl.forEach((stu) => {
+      //     new_nextClassNames.push(stu.nextClass);
+      //   });
+      // });
+      // new_nextClassNames = [...new Set(new_nextClassNames)];
+      // new_nextClassNames.sort((a, b) => a - b);
+
+      // new_nextClassNames.forEach((name) => {
+      //   new_nextClassData.push([name]);
+      // });
+
+      // new_nextClassNames.forEach((nextCl, index) => {
+      //   new_AdaptClass.forEach((exCl, cl_index) => {
+      //     exCl.forEach((stu, stu_index) => {
+      //       if (stu.nextClass === nextCl) {
+      //         // 넥스트 클래스 데이터에서 이름 같은거 찾아서..
+      //         new_nextClassData =
+      //         new_nextClassData?.[index].push({
+      //           ...stu,
+      //           nextClass: CLASS_NAME[hanglOrNum][cl_index],
+      //           nextNum: stu_index + 1,
+      //         });
+      //       }
+      //     });
+      //   });
+      // });
+      // new_nextClassData?.map((exClData, index) => {
+      //   exClData?.sort((a, b) => {
+      //     if (a?.num !== "-" && b?.num !== "-") {
+      //       return a.num - b.num;
+      //     } else {
+      //       return a.name?.localeCompare(b.name);
+      //     }
+      //   });
+      //   return exClData;
+      // });
+
+      // setExClassData(new_nextClassData);
+      // setExClassNames(new_nextClassNames);
+
+      // const new_wholeClass = orderByGenderName(nextAdaptClass, firstMale);
+      // setNextAdaptClass([...new_wholeClass]);
+      // console.table(new_wholeClass);
+
+      //현재 학급으로 보려면..
+    } else {
+      const [exClData, exClNames] = orderByExClass(true);
+
+      setNextAdaptClass(exClData);
+      console.table(exClData);
+    }
+
+    setOrderOriginClass((prev) => !prev);
   };
 
   // 남, 여학생 모아서 내림차순 정렬하기
@@ -76,33 +165,36 @@ function App() {
       let wholeFilter = cl.filter((stu) => stu);
 
       maleFilter.sort((a, b) => {
-        return a.name.localeCompare(b.name);
+        return a.name?.localeCompare(b.name);
       });
       femaleFilter.sort((a, b) => {
-        return a.name.localeCompare(b.name);
+        return a.name?.localeCompare(b.name);
       });
       wholeFilter.sort((a, b) => {
-        return a.name.localeCompare(b.name);
+        return a.name?.localeCompare(b.name);
       });
 
-      const new_cl = [];
+      let new_cl;
       if (how === "male") {
-        new_cl.push(...maleFilter, ...femaleFilter);
+        new_cl = [...maleFilter, ...femaleFilter];
       } else if (how === "female") {
-        new_cl.push(...femaleFilter, ...maleFilter);
+        new_cl = [...femaleFilter, ...maleFilter];
       } else if (how === "whole") {
-        new_cl.push(...wholeFilter);
+        new_cl = [...wholeFilter];
       }
+
       //전출학생 제외하고 배열만들기
-      let new_cl_transfer = new_cl.filter((stu) => stu.note !== "전출");
+      let new_cl_transfer = new_cl.filter((stu) => !stu.note.includes("전출"));
       //전출인 학생 제일 뒤에 붙이기
       new_cl.forEach((stu) => {
-        if (stu["note"] === "전출") {
+        if (stu["note"].includes("전출")) {
           new_cl_transfer.push(stu);
         }
       });
+
       new_wholeClass.push(new_cl_transfer);
     });
+
     return new_wholeClass;
   };
 
@@ -260,24 +352,61 @@ function App() {
     });
   };
 
-  //각반의 중복이름 체크함수
-  const duplicateCheck = () => {
-    nextAdaptClass.forEach((cl, cl_index) => {
-      cl.forEach((stu, stu_index) => {
-        //중복학생 인덱스찾기
-        let dupli_index = cl.findIndex(
-          (i) => i.name.slice(1) === stu.name.slice(1)
-        );
-        if (dupli_index !== stu_index) {
-          document.getElementById(
-            `${cl[dupli_index].exClass}-${cl[dupli_index].num}`
-          ).className += ` ${classes["dupli-stu-bg"]}`;
-          document.getElementById(
-            `${stu.exClass}-${stu.num}`
-          ).className += ` ${classes["dupli-stu-bg"]}`;
-        }
-      });
+  // 상태에 따라 duplicateCheck 실행 함수
+  const handleDuplicateCheck = () => {
+    setCheckDupliName((prevState) => {
+      const newState = !prevState; // 상태를 반전
+      duplicateCheck(!prevState); // 상태 반영 후 실행
+      return newState;
     });
+  };
+
+  //각반의 중복이름 체크함수
+  const duplicateCheck = (nowState) => {
+    //중복 해제가 되면.. 모든 학생에 있는 배경색 제거
+    if (!nowState) {
+      nextAdaptClass.forEach((cl) => {
+        cl.forEach((s) => {
+          document
+            .getElementById(`${s.exClass}-${s.num}`)
+            .classList.remove(classes["dupli-stu-bg"]);
+        });
+      });
+    } else {
+      nextAdaptClass.forEach((cl) => {
+        cl.forEach((stu, stu_index) => {
+          // 중복학생 인덱스 찾기
+          let dupli_index = cl.findIndex(
+            (i) => i.name.slice(1) === stu.name.slice(1)
+          );
+
+          if (dupli_index !== stu_index) {
+            const firstElement = document.getElementById(
+              `${cl[dupli_index].exClass}-${cl[dupli_index].num}`
+            );
+            const secondElement = document.getElementById(
+              `${stu.exClass}-${stu.num}`
+            );
+
+            // if (nowState) {
+
+            // 상태가 true면 클래스 추가
+            if (!firstElement.classList.contains(classes["dupli-stu-bg"])) {
+              firstElement.classList.add(classes["dupli-stu-bg"]);
+            }
+            if (!secondElement.classList.contains(classes["dupli-stu-bg"])) {
+              secondElement.classList.add(classes["dupli-stu-bg"]);
+            }
+
+            // } else {
+            //   // 상태가 false면 클래스 제거
+            //   firstElement.classList.remove(classes["dupli-stu-bg"]);
+            //   secondElement.classList.remove(classes["dupli-stu-bg"]);
+            // }
+          }
+        });
+      });
+    }
   };
 
   //빈자리 클릭했을 때 학생 넣어주기
@@ -352,14 +481,67 @@ function App() {
     }
   };
 
+  //내년반기준 데이터를, 기존반 기준 데이터로 변경하기...
+  const orderByExClass = (returnArray) => {
+    let new_AdaptClass = [...nextAdaptClass];
+    let new_exClassData = [];
+    let new_exClassNames = [];
+    new_AdaptClass.forEach((next_cl) => {
+      next_cl.forEach((stu) => {
+        new_exClassNames.push(stu.exClass);
+      });
+    });
+    new_exClassNames = [...new Set(new_exClassNames)];
+    new_exClassNames.sort((a, b) => a - b);
+
+    new_exClassNames.forEach((name) => {
+      new_exClassData.push([]);
+    });
+
+    new_exClassNames.forEach((exCl, index) => {
+      new_AdaptClass.forEach((next_cl, cl_index) => {
+        next_cl.forEach((stu, stu_index) => {
+          if (stu.exClass === exCl) {
+            new_exClassData?.[index].push({
+              ...stu,
+              nextClass: CLASS_NAME[hanglOrNum][cl_index],
+              nextNum: stu_index + 1,
+            });
+          }
+        });
+      });
+    });
+    new_exClassData?.map((exClData, index) => {
+      exClData?.sort((a, b) => {
+        if (a?.num !== "-" && b?.num !== "-") {
+          return a.num - b.num;
+        } else {
+          return a.name?.localeCompare(b.name);
+        }
+      });
+      return exClData;
+    });
+
+    setExClassData(new_exClassData);
+    setExClassNames(new_exClassNames);
+
+    if (returnArray) return [new_exClassData, new_exClassNames];
+  };
+
   //엑셀파일 만들어서 저장
   const makeExcelFile = () => {
+    const [exClData, exClNames] = orderByExClass(true);
+    // console.log(exClData);
+    // console.log(exClNames);
     // 나이스 업로드 용
     const book = utils.book_new();
     // 명렬표 용
     const book2 = utils.book_new();
+    // 기존학급 용
+    const book3 = utils.book_new();
 
     let new_AdaptClass = [...nextAdaptClass];
+
     new_AdaptClass.forEach((cl, cl_index) => {
       //나이스 업로드용
       let new_cl = [];
@@ -383,7 +565,7 @@ function App() {
           +yearGrade.slice(8, 9),
           stu_index + 1,
           stu.gender,
-          stu.birthday,
+          stu.birthday.length === 8 ? "20" + stu.birthday : stu.birthday,
         ]);
       });
       const sheetData = utils.aoa_to_sheet(new_cl);
@@ -415,6 +597,7 @@ function App() {
         "성별",
         "생년월일",
         "이전반",
+        "이전번호",
         "총점",
         "비고",
         "협동",
@@ -428,6 +611,7 @@ function App() {
           stu.gender,
           stu.birthday,
           stu.exClass,
+          stu.num,
           stu.score,
           stu.note || "",
           stu.teamWork || "",
@@ -442,7 +626,8 @@ function App() {
         { wpx: 40 }, // 성별
         { wpx: 70 }, // 생년월일
         { wpx: 50 }, // 이전반
-        { wpx: 30 }, // 총점
+        { wpx: 60 }, // 이전반 번호
+        { wpx: 50 }, // 총점
         { wpx: 60 }, // 비고
         { wpx: 40 }, // 협동
       ];
@@ -455,9 +640,62 @@ function App() {
       );
     });
 
+    exClData.forEach((cl, cl_index) => {
+      //기존학급용 명렬표
+      let new_cl_3 = [];
+      new_cl_3.push([
+        "학년",
+        "반",
+        "번호 ",
+        "이름",
+        "성별",
+        "생년월일",
+        "내년반",
+        "내년번호",
+        "총점",
+        "비고",
+        "협동",
+      ]);
+      cl.forEach((stu, stu_index) => {
+        new_cl_3.push([
+          +yearGrade.slice(8, 9) - 1,
+          stu.exClass,
+          stu.num,
+          stu.name,
+          stu.gender,
+          stu.birthday,
+          stu.nextClass,
+          stu.nextNum,
+          stu.score,
+          stu.note || "",
+          stu.teamWork || "",
+        ]);
+      });
+      const sheetData3 = utils.aoa_to_sheet(new_cl_3);
+      sheetData3["!cols"] = [
+        { wpx: 40 }, // 기존학년
+        { wpx: 40 }, // 기존반
+        { wpx: 30 }, // 기존번호
+        { wpx: 60 }, // 이름
+        { wpx: 40 }, // 성별
+        { wpx: 70 }, // 생년월일
+        { wpx: 50 }, // 내년반
+        { wpx: 60 }, // 내년반 번호
+        { wpx: 50 }, // 총점
+        { wpx: 60 }, // 비고
+        { wpx: 40 }, // 협동
+      ];
+
+      //시트에 작성한 데이터 넣기 파일명, 데이터, 시트명
+
+      utils.book_append_sheet(book3, sheetData3, `${exClNames[cl_index]}반`);
+    });
+
     writeFile(book, `${yearGrade} 학급편성자료(나이스용).xlsx`);
 
     writeFile(book2, `${yearGrade} 학급편성자료(명렬표).xlsx`);
+
+    writeFile(book3, `내년도 학급편성자료(기존학급기준).xlsx`);
   };
 
   function truncateString(str, maxLength) {
@@ -474,12 +712,13 @@ function App() {
       {classStudents?.length === 0 && (
         <>
           <ExcelUploader
-            setStudents={(students, isNew) => {
+            setStudents={(students, isNew, yearGr) => {
               setClassStudents([...students]);
               if (!isNew) {
                 setNextOriginClass([...students]);
                 setNextAdaptClass([...students]);
                 setDivided(true);
+                setYearGrade(yearGr);
               }
             }}
           />
@@ -660,8 +899,17 @@ function App() {
             <button className={classes["settingBtn"]} onClick={originReset}>
               초기화
             </button>
-            <button className={classes["settingBtn"]} onClick={duplicateCheck}>
-              중복이름확인
+            <button
+              className={classes["settingBtn"]}
+              onClick={handleDuplicateCheck}
+            >
+              {!checkDupliName ? "중복이름확인" : "중복해제"}
+            </button>
+            <button
+              className={classes["settingBtn"]}
+              onClick={orderByClassHandler}
+            >
+              {!orderOriginClass ? "현재학급 보기" : "내년학급 보기"}
             </button>
             <button
               className={`${classes["settingBtn"]} ${classes["male"]}`}
@@ -718,12 +966,44 @@ function App() {
               <div
                 className={classes["newClass-ul"]}
                 key={cl + index + "반div"}
+                style={{ padding: "0 5px" }}
               >
                 <span className={classes["gradeClassSpan"]}>
                   {CLASS_NAME[hanglOrNum][index]} 반
                 </span>
 
-                <ul className={classes["newClass-ul"]} key={`newclass${index}`}>
+                <div
+                  className={classes["newClass-li"]}
+                  style={{
+                    border: "none",
+                    padding: "5px 0",
+                    marginBottom: "-20px",
+                  }}
+                >
+                  <span className={classes["newClassSpan-name"]}>
+                    <b>이름</b>
+                  </span>
+                  <span
+                    className={classes["newClassSpan-exClass"]}
+                    onClick={orderByClassHandler}
+                  >
+                    <b>{!orderOriginClass ? "현재반" : "내년반"}</b>
+                  </span>
+                  <span className={classes["newClassSpan-gender"]}>
+                    <b>성별</b>
+                  </span>
+                  <span className={classes["newClassSpan-score"]}>
+                    <b>점수</b>
+                  </span>
+                  <span className={classes["newClassSpan-note"]}>
+                    <b>비고</b>
+                  </span>
+                </div>
+
+                <ul
+                  className={classes["newClass-ul"]}
+                  //  key={`newclass${index}`}
+                >
                   {cl.map((stu, stu_index) => (
                     <li
                       id={stu.exClass + "-" + stu.num}
@@ -741,7 +1021,7 @@ function App() {
                       // } ${stu.teamWork === 4 ? classes["cl4"] : ""} ${
                       //   stu.teamWork === 5 ? classes["cl5"] : ""
                       // } ${stu.teamWork === 6 ? classes["cl6"] : ""}`}
-                      key={stu.exClass + stu.name}
+                      key={stu.exClass + stu_index + stu.name}
                       onClick={(e) => {
                         const currentT = e.currentTarget;
                         // 클릭된 학생이 없었으면 템프에 추가해두고 테두리 진하게!
@@ -854,7 +1134,9 @@ function App() {
                       </span>
                       <span
                         className={classes["newClassSpan-note"]}
-                        title={stu.note?.length > 4 ? stu.note : ""}
+                        title={
+                          stu.note?.length > 4 ? stu.name + ") " + stu.note : ""
+                        }
                       >
                         {truncateString(stu.note, 4)}
                       </span>
@@ -868,20 +1150,89 @@ function App() {
                     빈자리에 넣기
                   </button>
                 </ul>
-                <div className={classes["goodStudent"]}>
-                  에이스 - {cl.filter((stu) => stu.teamWork === "굿").length} 명
+              </div>
+            ))}
+          </div>
+
+          <div className={classes["newClass-div"]}>
+            {nextAdaptClass.map((cl, index) => (
+              <div key={index} className={classes["newClass-ul"]}>
+                <span className={classes["gradeClassSpan"]}>
+                  {CLASS_NAME[hanglOrNum][index]} 반
+                </span>
+
+                <div
+                  className={classes["goodStudent"]}
+                  title="협동에 '굿' 기록 학생 수"
+                >
+                  에이스 -{" "}
+                  {cl.filter((stu) => stu.teamWork.includes("굿")).length} 명
                 </div>
-                <div className={classes["badStudent"]}>
+                <div
+                  className={classes["badStudent"]}
+                  title="협동에 '배드' 기록 학생 수"
+                >
                   마이너스 -{" "}
-                  {cl.filter((stu) => stu.teamWork === "배드").length} 명
+                  {cl.filter((stu) => stu.teamWork.includes("배드")).length} 명
                 </div>
-                <div className={classes["specialStudent"]}>
-                  특수반 - {cl.filter((stu) => stu.note === "특수반").length} 명
+                <div
+                  className={classes["specialStudent"]}
+                  title="비고에 '특수반' 기록 학생 수"
+                >
+                  특수반 -{" "}
+                  {cl.filter((stu) => stu.note.includes("특수반")).length} 명
                 </div>
-                <div>비고 - {cl.filter((stu) => stu.note !== "").length}</div>
-                <div>
+                <div
+                  className={classes["grayBack"]}
+                  title="비고에 '쌍둥이' 혹은 '쌍생아' 기록 학생 수"
+                >
+                  쌍둥이 -{" "}
+                  {
+                    cl.filter(
+                      (stu) =>
+                        stu.note.includes("쌍둥이") ||
+                        stu.note.includes("쌍생아")
+                    ).length
+                  }{" "}
+                  명
+                </div>
+                <div title="비고에 '생활지도' 기록 학생 수">
+                  생활지도 -{" "}
+                  {cl.filter((stu) => stu.note.includes("생활지도")).length} 명
+                </div>
+                <div
+                  className={classes["grayBack"]}
+                  title="비고에 '학습부진' 기록 학생 수"
+                >
+                  학습부진 -{" "}
+                  {cl.filter((stu) => stu.note.includes("학습부진")).length} 명
+                </div>
+                <div title="비고에 '다문화' 기록 학생 수">
+                  다문화 -{" "}
+                  {cl.filter((stu) => stu.note.includes("다문화")).length} 명
+                </div>
+                <div
+                  className={classes["grayBack"]}
+                  title="비고에 '전출' 기록 학생 수"
+                >
+                  전출예정 -{" "}
+                  {cl.filter((stu) => stu.note.includes("전출")).length} 명
+                </div>
+                <div title="전출학생 제외한 비고 존재 학생 수">
+                  비고 -{" "}
+                  {
+                    cl.filter(
+                      (stu) =>
+                        stu.note?.trim() !== "" && !stu.note.includes("전출")
+                    ).length
+                  }
+                </div>
+                <div
+                  className={classes["grayBack"]}
+                  style={{ fontSize: "20px" }}
+                >
                   남 {cl.filter((stu) => stu.gender === "남").length} / 여{" "}
-                  {cl.filter((stu) => stu.gender === "여").length} / 총{" "}
+                  {cl.filter((stu) => stu.gender === "여").length} <br /> 총{" "}
                   {cl.length}명
                 </div>
               </div>
