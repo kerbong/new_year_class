@@ -30,7 +30,8 @@ const EXPLAINS = [
   "* 이름 / 이전반 / 성별 / 점수 / 비고 순서로 보여집니다.",
   "* 초기화 버튼을 누르면 처음 반배정되었던 상태로 되돌아갑니다.",
   "* 사이트를 새로고침 하실 경우 작업 중이던 자료가 사라집니다.",
-  "* 중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은학생이 있는지 확인해서 빨간색으로 표시합니다.",
+  "* 중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은학생이 있는지 확인해서 빨간색으로 표시/제거합니다.",
+  "* 내년학급기준/현재학급기준 버튼을 누르면 해당 기준으로 학생들이 정렬됩니다.",
   "* 남자 앞번호 / 여자 앞번호 / 혼성번호 버튼을 누르면 현재 상태에서 성별을 기준으로 정렬됩니다.",
   "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 이유를 입력하면 학급이 교체됩니다.",
   "* 학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로 이동됩니다.",
@@ -88,61 +89,19 @@ function App() {
           return acc;
         }, {});
 
-      // 결과를 배열 형태로 변환
-      const groupedArray = Object.values(groupedByNextClass);
+      // 객체를 배열로 변환하며 기준에 따라 정렬
+      // CLASS_NAME 기준으로 정렬 및 배열 변환
+      const groupedArray = Object.entries(groupedByNextClass)
+        .sort(([keyA], [keyB]) => {
+          // CLASS_NAME에서 keyA와 keyB의 순서 비교
+          const findIndex = (key) =>
+            CLASS_NAME.findIndex((list) => list.includes(key)) * 100 +
+            CLASS_NAME.flat().indexOf(key); // 대분류와 소분류 인덱스 조합
+          return findIndex(keyA) - findIndex(keyB);
+        })
+        .map(([_, students]) => students); // 학생 배열만 추출
 
-      console.log(groupedArray);
       setNextAdaptClass(groupedArray);
-
-      // let new_AdaptClass = [...nextAdaptClass];
-      // let new_nextClassData = [];
-      // let new_nextClassNames = [];
-
-      // //내년학급 이름 모으기
-      // new_AdaptClass.forEach((next_cl) => {
-      //   next_cl.forEach((stu) => {
-      //     new_nextClassNames.push(stu.nextClass);
-      //   });
-      // });
-      // new_nextClassNames = [...new Set(new_nextClassNames)];
-      // new_nextClassNames.sort((a, b) => a - b);
-
-      // new_nextClassNames.forEach((name) => {
-      //   new_nextClassData.push([name]);
-      // });
-
-      // new_nextClassNames.forEach((nextCl, index) => {
-      //   new_AdaptClass.forEach((exCl, cl_index) => {
-      //     exCl.forEach((stu, stu_index) => {
-      //       if (stu.nextClass === nextCl) {
-      //         // 넥스트 클래스 데이터에서 이름 같은거 찾아서..
-      //         new_nextClassData =
-      //         new_nextClassData?.[index].push({
-      //           ...stu,
-      //           nextClass: CLASS_NAME[hanglOrNum][cl_index],
-      //           nextNum: stu_index + 1,
-      //         });
-      //       }
-      //     });
-      //   });
-      // });
-      // new_nextClassData?.map((exClData, index) => {
-      //   exClData?.sort((a, b) => {
-      //     if (a?.num !== "-" && b?.num !== "-") {
-      //       return a.num - b.num;
-      //     } else {
-      //       return a.name?.localeCompare(b.name);
-      //     }
-      //   });
-      //   return exClData;
-      // });
-
-      // setExClassData(new_nextClassData);
-      // setExClassNames(new_nextClassNames);
-
-      // const new_wholeClass = orderByGenderName(nextAdaptClass, firstMale);
-      // setNextAdaptClass([...new_wholeClass]);
-      // console.table(new_wholeClass);
 
       //현재 학급으로 보려면..
     } else {
@@ -293,7 +252,18 @@ function App() {
 
     setNextOriginClass(JSON.parse(JSON.stringify(new_wholeClass)));
     setNextAdaptClass([...new_wholeClass]);
+    console.log(new_wholeClass);
     setDivided(true);
+  };
+
+  const editYearAndGrade = (inputStr) => {
+    const yearPattern = inputStr?.slice(0, 4);
+    const gradePattern = inputStr?.slice(8, 9);
+
+    const adjustedYear = String(Number(yearPattern) - 1); // 학년도 숫자 -1
+    const adjustedGrade = String(Number(gradePattern) - 1); // 학년 숫자 -1
+
+    return adjustedYear + "학년도 " + adjustedGrade + "학년";
   };
 
   //분반시작 버튼누르면 실행
@@ -880,7 +850,9 @@ function App() {
       {/* 초기화버튼, 중복이름확인버튼, 이름순재정렬, 엑셀저장버튼,  */}
       {divided && (
         <>
-          <span className={classes["gradeClassSpan"]}>{yearGrade}</span>
+          <span className={classes["gradeClassSpan"]}>
+            {orderOriginClass ? editYearAndGrade(yearGrade) : yearGrade}
+          </span>
 
           <div>
             <button
@@ -909,7 +881,7 @@ function App() {
               className={classes["settingBtn"]}
               onClick={orderByClassHandler}
             >
-              {!orderOriginClass ? "현재학급 보기" : "내년학급 보기"}
+              {!orderOriginClass ? "현재학급 기준" : "내년학급 기준"}
             </button>
             <button
               className={`${classes["settingBtn"]} ${classes["male"]}`}
@@ -969,7 +941,10 @@ function App() {
                 style={{ padding: "0 5px" }}
               >
                 <span className={classes["gradeClassSpan"]}>
-                  {CLASS_NAME[hanglOrNum][index]} 반
+                  {!orderOriginClass
+                    ? CLASS_NAME[hanglOrNum][index]
+                    : cl[0]?.exClass}
+                  반
                 </span>
 
                 <div
@@ -1124,7 +1099,7 @@ function App() {
                         {stu.name}
                       </span>
                       <span className={classes["newClassSpan-exClass"]}>
-                        {stu.exClass}
+                        {orderOriginClass ? stu?.nextClass : stu.exClass}
                       </span>
                       <span className={classes["newClassSpan-gender"]}>
                         {stu.gender}
@@ -1248,7 +1223,7 @@ function App() {
             <li key={"reason" + index} className={classes["reason-li"]}>
               {/* 바꾼 1번 학생 보여주기 */}
               <span className={classes["cl2"]}>
-                {data.student1_name}(작년 {data.student1_exClass}반)
+                {data.student1_name}(현재 {data.student1_exClass}반)
               </span>
               {CLASS_NAME[hanglOrNum][data.student1_classFromIndex]}반 👉
               {CLASS_NAME[hanglOrNum][data.student1_classToIndex]}반{" "}
@@ -1256,14 +1231,14 @@ function App() {
               {data.change_or_put === "change" && (
                 <>
                   <span className={classes["cl1"]}>
-                    {data.student2_name}(작년 {data.student2_exClass}반)
+                    {data.student2_name}(현재 {data.student2_exClass}반)
                   </span>{" "}
                   {CLASS_NAME[hanglOrNum][data.student2_classFromIndex]}반 👉{" "}
                   {CLASS_NAME[hanglOrNum][data.student2_classToIndex]}반
                 </>
               )}
               {/* 바꾼 이유 보여주기 */}
-              <span className={classes["cl5"]}>{data.change_reason}</span>
+              <span className={classes["cl5"]}>이유: {data.change_reason}</span>
             </li>
           ))}{" "}
         </div>
