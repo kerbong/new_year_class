@@ -339,55 +339,122 @@ function App() {
 
       let new_AdaptClass = JSON.parse(JSON.stringify(nextAdaptClass));
 
-      // 1차: 생활지도/학습부진/다문화/학부모 학생 분산
+      // 레벨 가중치 함수 (상:3, 중:2, 하:1, 레벨없음:2)
+      const getLevelWeight = (note, caseType) => {
+        if (!note || !note.includes(caseType)) return 0;
+        if (note.includes(`${caseType}-상`)) return 3;
+        if (note.includes(`${caseType}-중`)) return 2;
+        if (note.includes(`${caseType}-하`)) return 1;
+        // 레벨 표시 없이 해당 케이스만 있으면 중으로 처리
+        return 2;
+      };
+
+      // 1차: 생활지도/학습부진/다문화/학부모 학생 분산 (레벨 고려)
       const specialCases = ["생활지도", "학습부진", "다문화", "학부모"];
+      const leveledCases = ["생활지도", "학부모"]; // 레벨을 고려해야 하는 케이스
 
       for (let caseType of specialCases) {
-        // 각 반별로 해당 케이스 학생 수 계산
-        let classSpecialCount = new_AdaptClass.map(cl =>
-          (cl || []).filter(stu => stu && stu.note?.includes(caseType)).length
-        );
+        // 해당 케이스가 레벨을 고려해야 하는 경우
+        if (leveledCases.includes(caseType)) {
+          // 레벨별로 분산 (상 -> 중 -> 하 순서로)
+          const levels = ["-상", "-중", "-하", ""]; // 빈 문자열은 레벨 없이 케이스만 있는 경우
 
-        // 빈 배열 체크
-        if (classSpecialCount.length === 0) continue;
+          for (let level of levels) {
+            const targetPattern = level === "" ? caseType : `${caseType}${level}`;
 
-        // 가장 많은 반과 가장 적은 반 찾기
-        let loopCount = 0;
-        const maxLoops = 1000; // 무한루프 방지
-        while (Math.max(...classSpecialCount) - Math.min(...classSpecialCount) > 1) {
-          if (loopCount++ > maxLoops) break;
+            let loopCount = 0;
+            const maxLoops = 1000;
 
-          let maxClassIndex = classSpecialCount.indexOf(Math.max(...classSpecialCount));
-          let minClassIndex = classSpecialCount.indexOf(Math.min(...classSpecialCount));
+            while (loopCount++ < maxLoops) {
+              // 각 반별 가중치 합산 계산
+              let classWeights = new_AdaptClass.map(cl =>
+                (cl || []).reduce((sum, stu) => sum + getLevelWeight(stu.note, caseType), 0)
+              );
 
-          // 인덱스 유효성 체크
-          if (maxClassIndex === -1 || minClassIndex === -1) break;
-          if (!new_AdaptClass[maxClassIndex] || !new_AdaptClass[minClassIndex]) break;
+              let maxWeight = Math.max(...classWeights);
+              let minWeight = Math.min(...classWeights);
 
-          // 가장 많은 반에서 해당 케이스 학생 찾기
-          let specialStudentIndex = new_AdaptClass[maxClassIndex].findIndex(
-            stu => stu && stu.note?.includes(caseType)
-          );
+              // 가중치 차이가 2 이하면 충분히 균형잡힘
+              if (maxWeight - minWeight <= 2) break;
 
-          if (specialStudentIndex === -1) break;
+              let maxClassIndex = classWeights.indexOf(maxWeight);
+              let minClassIndex = classWeights.indexOf(minWeight);
 
-          // 가장 적은 반에서 비고가 없는 학생 찾기
-          let normalStudentIndex = new_AdaptClass[minClassIndex].findIndex(
-            stu => stu && (!stu.note || stu.note.trim() === "")
-          );
+              if (maxClassIndex === -1 || minClassIndex === -1) break;
+              if (!new_AdaptClass[maxClassIndex] || !new_AdaptClass[minClassIndex]) break;
 
-          if (normalStudentIndex === -1) break;
+              // 가장 많은 반에서 해당 레벨 학생 찾기
+              let specialStudentIndex = new_AdaptClass[maxClassIndex].findIndex(
+                stu => {
+                  if (!stu || !stu.note) return false;
+                  if (level === "") {
+                    // 레벨 없이 케이스만 있는 경우
+                    return stu.note.includes(caseType) &&
+                           !stu.note.includes(`${caseType}-상`) &&
+                           !stu.note.includes(`${caseType}-중`) &&
+                           !stu.note.includes(`${caseType}-하`);
+                  }
+                  return stu.note.includes(targetPattern);
+                }
+              );
 
-          // 두 학생 교환
-          let temp = new_AdaptClass[maxClassIndex][specialStudentIndex];
-          new_AdaptClass[maxClassIndex][specialStudentIndex] =
-            new_AdaptClass[minClassIndex][normalStudentIndex];
-          new_AdaptClass[minClassIndex][normalStudentIndex] = temp;
+              if (specialStudentIndex === -1) break;
 
-          // 카운트 업데이트
-          classSpecialCount = new_AdaptClass.map(cl =>
+              // 가장 적은 반에서 비고가 없는 학생 찾기
+              let normalStudentIndex = new_AdaptClass[minClassIndex].findIndex(
+                stu => stu && (!stu.note || stu.note.trim() === "")
+              );
+
+              if (normalStudentIndex === -1) break;
+
+              // 두 학생 교환
+              let temp = new_AdaptClass[maxClassIndex][specialStudentIndex];
+              new_AdaptClass[maxClassIndex][specialStudentIndex] =
+                new_AdaptClass[minClassIndex][normalStudentIndex];
+              new_AdaptClass[minClassIndex][normalStudentIndex] = temp;
+            }
+          }
+        } else {
+          // 레벨을 고려하지 않는 케이스 (학습부진, 다문화)
+          let classSpecialCount = new_AdaptClass.map(cl =>
             (cl || []).filter(stu => stu && stu.note?.includes(caseType)).length
           );
+
+          if (classSpecialCount.length === 0) continue;
+
+          let loopCount = 0;
+          const maxLoops = 1000;
+          while (Math.max(...classSpecialCount) - Math.min(...classSpecialCount) > 1) {
+            if (loopCount++ > maxLoops) break;
+
+            let maxClassIndex = classSpecialCount.indexOf(Math.max(...classSpecialCount));
+            let minClassIndex = classSpecialCount.indexOf(Math.min(...classSpecialCount));
+
+            if (maxClassIndex === -1 || minClassIndex === -1) break;
+            if (!new_AdaptClass[maxClassIndex] || !new_AdaptClass[minClassIndex]) break;
+
+            let specialStudentIndex = new_AdaptClass[maxClassIndex].findIndex(
+              stu => stu && stu.note?.includes(caseType)
+            );
+
+            if (specialStudentIndex === -1) break;
+
+            let normalStudentIndex = new_AdaptClass[minClassIndex].findIndex(
+              stu => stu && (!stu.note || stu.note.trim() === "")
+            );
+
+            if (normalStudentIndex === -1) break;
+
+            // 두 학생 교환
+            let temp = new_AdaptClass[maxClassIndex][specialStudentIndex];
+            new_AdaptClass[maxClassIndex][specialStudentIndex] =
+              new_AdaptClass[minClassIndex][normalStudentIndex];
+            new_AdaptClass[minClassIndex][normalStudentIndex] = temp;
+
+            classSpecialCount = new_AdaptClass.map(cl =>
+              (cl || []).filter(stu => stu && stu.note?.includes(caseType)).length
+            );
+          }
         }
       }
 
@@ -1392,8 +1459,12 @@ function App() {
                 </div>
                 <div
                   className={classes["grayBack"]}
-                  title="비고에 '전출' 기록 학생 수"
+                  title="비고에 '학부모' 기록 학생 수"
                 >
+                  학부모 -{" "}
+                  {cl.filter((stu) => stu.note.includes("학부모")).length} 명
+                </div>
+                <div title="비고에 '전출' 기록 학생 수">
                   전출예정 -{" "}
                   {cl.filter((stu) => stu.note.includes("전출")).length} 명
                 </div>
