@@ -1,0 +1,259 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.btn,
+.nonClickedBtn,
+.settingBtn,
+.clickedBtn {
+  padding: 20px;
+  background-color: rgb(183, 140, 182);
+  font-size: 1.2rem;
+  border-radius: 20px;
+  border-width: 0;
+  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+  margin: 20px;
+}
+
+.settingBtn {
+  padding: 10px;
+  font-size: 1.2rem;
+}
+
+.clickedBtn {
+  font-size: 1.6rem;
+  padding: 30px;
+  font-weight: bold;
+}
+
+.class_input,
+.classInput,
+.yearInput {
+  padding: 20px;
+  font-size: 3rem;
+  text-align: center;
+  width: 60px;
+}
+
+.yearInput {
+  width: 120px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  width: 800px;
+}
+.divide {
+  font-size: 2.6rem;
+}
+
+.formLabelInput {
+  margin: 30px 0 50px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 3rem;
+}
+
+.newClass-div,
+.newClass-ul,
+.newClass-li {
+  display: flex;
+  width: 100%;
+}
+
+.newClass-li {
+  height: 20px;
+
+  padding: 0.5px 0;
+  background-color: inherit;
+  display: flex;
+  align-items: center;
+  border-top: 0.1px solid;
+}
+.dupli-stu-bg {
+  background-color: red;
+}
+
+.newClass-ul {
+  flex-direction: column;
+  padding: 5px;
+}
+
+.newClassSpan-name {
+  flex-basis: 35%;
+}
+.newClassSpan-gender,
+.newClassSpan-exClass,
+.newClassSpan-score {
+  flex-basis: 12%;
+}
+
+.newClassSpan-note {
+  flex-basis: 29%;
+  font-size: 13px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.grayBack {
+  background-color: #e7e7e7;
+}
+
+.goodStudent {
+  background-color: #70be0d69;
+}
+
+.badStudent {
+  background-color: #8b000080;
+}
+.specialStudent {
+  background-color: #6d008b80;
+}
+
+.yearLabel,
+.gradeClassLabel {
+  display: flex;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.gradeClassSpan {
+  font-size: 2rem;
+}
+
+.emptyBtn {
+  margin: 20px;
+  height: 30px;
+}
+
+.fileUpload .excelLabel {
+  margin: 20px;
+
+  display: inline-block;
+  padding: 0.5em 0.75em;
+  color: #e3e2e2;
+  font-size: inherit;
+  line-height: normal;
+  vertical-align: middle;
+  background-color: #a852cb;
+  cursor: pointer;
+  border: 1px solid #ebebeb;
+  border-bottom-color: #e2e2e2;
+  border-radius: 0.25em;
+}
+
+.fileUpload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.explainDiv {
+  font-size: 1.4rem;
+  margin: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.explainSpan {
+  margin: 10px;
+}
+
+.male {
+  margin: 0 10px;
+  background-color: burlywood;
+}
+
+.explainBg {
+  background-color: rgb(135, 222, 195);
+}
+
+.footer {
+  position: static;
+
+  height: 40px;
+  width: 100%;
+  background: #e2dbe2;
+  color: #55405b;
+  margin-top: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnGroup-div {
+  background-color: #8a2be217;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  margin: 10px;
+}
+.newClassOption {
+  display: flex;
+  justify-content: center;
+}
+
+.cl1,
+.cl2,
+.cl3,
+.cl4,
+.cl5,
+.cl6 {
+  padding: 5px 10px;
+  border-radius: 15px;
+  margin: 5px 10px;
+}
+
+.cl1 {
+  background-color: rgb(235, 135, 135);
+  margin-left: 30px;
+}
+.cl2 {
+  background-color: rgb(235, 210, 135);
+}
+.cl3 {
+  background-color: rgb(138, 235, 135);
+}
+.cl4 {
+  background-color: rgb(135, 235, 233);
+}
+.cl5 {
+  background-color: rgb(135, 160, 235);
+  margin-left: 30px;
+}
+.cl6 {
+  background-color: rgb(232, 135, 235);
+}
+
+.reason-li {
+  margin: 10px;
+  list-style: none;
+  margin-right: 50px;
+}
+.reason-div {
+  display: flex;
+  flex-direction: row;
+  margin: 20px;
+  align-items: center;
+  width: 95%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.how-to-use {
+  margin: 30px;
+  padding: 50px;
+  background-color: #5f9ea059;
+  border-radius: 20px;
+  line-height: 2;
+}
