@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n자동배분 기능 추가\n\n- 초기화 버튼 오른쪽에 자동배분 버튼 추가\n- 1차: 생활지도/학습부진/다문화/학부모 학생 균등 분산\n- 2차: 비고의 그룹(그룹1, 그룹2 등) 학생 균등 배치\n- 3차: 굿/배드 학생 균등 배치 (비고 없는 학생 기준)\n- 무한루프 방지 및 예외 처리 강화\n- 설명에 자동배분 기능 안내 추가\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nMerge with remote and add auto-distribution feature\n\n- 자동배분 기능 추가\n- 초기화 버튼 오른쪽에 자동배분 버튼 배치\n- 1차: 생활지도/학습부진/다문화/학부모 학생 균등 분산\n- 2차: 비고의 그룹(그룹1, 그룹2 등) 학생 균등 배치\n- 3차: 굿/배드 학생 균등 배치 (비고 없는 학생 기준)\n- 무한루프 방지 및 예외 처리 강화\n- 설명에 자동배분 기능 안내 추가\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
