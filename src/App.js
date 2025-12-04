@@ -160,6 +160,11 @@ function App() {
 
   //내년 학급 초기자료 만들기!
   const divideClassHandler = (nextYearClass) => {
+    console.log('=== divideClassHandler 시작 ===');
+    console.log('nextYearClass:', nextYearClass);
+    console.log('classStudents:', classStudents);
+    console.log('classStudents 길이:', classStudents?.length);
+
     let nextWholeClass = [];
     //내년도 학급 만들어서 nextWholeClass에 넣어두기
     for (let i = 0; i < nextYearClass; i++) {

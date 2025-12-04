@@ -10,6 +10,42 @@ const ExcelUploader = (props) => {
 
   const fileInfoInput = useRef(null);
   const savedInfoInput = useRef(null);
+  // 보이지 않는 문자, 양쪽 공백 제거
+  function cleanString(v) {
+    if (v === undefined || v === null) return "";
+    return String(v)
+      .replace(/[\u200B-\u200D\uFEFF]/g, "") // 제로폭 문자 제거
+      .replace(/\s+/g, " ") // 중복 공백 정리
+      .trim();
+  }
+
+  // 한 줄(row)의 key 문제 정리
+  function cleanRow(row) {
+    let cleaned = {};
+    Object.keys(row).forEach((key) => {
+      const cleanKey = cleanString(key);
+      cleaned[cleanKey] = cleanString(row[key]);
+    });
+    return cleaned;
+  }
+
+  // 시트 → JSON 후 전체 정제
+  function normalizeSheet(sheet) {
+    let rows = utils.sheet_to_json(sheet, { defval: "" });
+
+    // row-level cleanup
+    rows = rows
+      .map((row) => cleanRow(row))
+      .filter((row) => Object.values(row).some((v) => v !== "")); // 완전 빈줄 제거
+
+    return rows;
+  }
+
+  // 숫자 변환 안전 처리
+  function toNumber(v) {
+    const n = Number(v);
+    return isNaN(n) ? 0 : n;
+  }
 
   useEffect(() => {
     //학생정보 배열 App으로 보내기
@@ -36,65 +72,67 @@ const ExcelUploader = (props) => {
         }
       };
       reader.onload = function () {
-        //파일 크기가 적당하면
         if (!isBig) {
           try {
             let data = reader.result;
             let workBook = read(data, { type: "binary" });
 
-            //새로운 양식으로 새롭게 작업하는 경우
+            // 새 작업
             if (isNew) {
-              //시트 각각을 작업하기
               workBook.SheetNames.forEach((sheetName) => {
-                // 시트마다 줄을 객체로 저장하기
-                let rows = [...utils.sheet_to_json(workBook.Sheets[sheetName])];
+                const sheet = workBook.Sheets[sheetName];
+
+                // 자동 정제 적용
+                let rows = normalizeSheet(sheet);
+
                 let new_rows = [];
+
                 rows.forEach((row) => {
                   new_rows.push({
-                    exClass: +row["반"],
-                    birthday: row["생년월일"],
-                    num: +row["번호"],
-                    gender: row["성별"],
-                    name: row["이름"],
-                    score: +row["총점"],
-                    note: row["비고"] || "",
-                    teamWork: row["협동"] || "",
+                    exClass: toNumber(row["반"]),
+                    birthday: cleanString(row["생년월일"]),
+                    num: toNumber(row["번호"]),
+                    gender: cleanString(row["성별"]),
+                    name: cleanString(row["이름"]),
+                    score: toNumber(row["총점"]),
+                    note: cleanString(row["비고"] || ""),
+                    teamWork: cleanString(row["협동"] || ""),
                   });
                 });
-                //스코어 높은순으로 정렬하기
-                new_rows.sort((a, b) => {
-                  return b["score"] - a["score"];
-                });
+
+                // 점수 내림차순
+                new_rows.sort((a, b) => b.score - a.score);
 
                 class_students.push([...new_rows]);
               });
 
-              // 기존 자료를 이어서 할 경우
+              // 이어서 작업
             } else {
-              //기존 자료면 상태 바꾸기
               let fileName = getFileName(input.files[0]);
-
               let yG = fileName.split(" 학급편성자료")[0];
               setYearGr(yG);
-
               setIsNew(false);
-              //시트 각각을 작업하기
+
               workBook.SheetNames.forEach((sheetName) => {
-                // 시트마다 줄을 객체로 저장하기
-                let rows = [...utils.sheet_to_json(workBook.Sheets[sheetName])];
+                const sheet = workBook.Sheets[sheetName];
+
+                // 자동 정제 적용
+                let rows = normalizeSheet(sheet);
+
                 let new_rows = [];
+
                 rows.forEach((row) => {
-                  //이름이 없는, 잘못된 줄은 제거
-                  if (!row["이름"]) return;
+                  if (!cleanString(row["이름"])) return;
+
                   new_rows.push({
-                    exClass: +row["이전반"],
-                    birthday: row["생년월일"] || "-",
-                    num: +row["이전번호"] || "-",
-                    gender: row["성별"],
-                    name: row["이름"],
-                    score: +row["총점"] || "-",
-                    note: row["비고"] || "",
-                    teamWork: row["협동"] || "",
+                    exClass: toNumber(row["이전반"]),
+                    birthday: cleanString(row["생년월일"] || "-"),
+                    num: toNumber(row["이전번호"]),
+                    gender: cleanString(row["성별"]),
+                    name: cleanString(row["이름"]),
+                    score: toNumber(row["총점"]),
+                    note: cleanString(row["비고"] || ""),
+                    teamWork: cleanString(row["협동"] || ""),
                   });
                 });
 
@@ -103,28 +141,24 @@ const ExcelUploader = (props) => {
             }
 
             setClassStudents([...class_students]);
-            //학생정보가 저장되면 로컬스토리지에 문자로 저장해두기
-            // localStorage.setItem("randomStudents", JSON.stringify(new_rows));
           } catch (error) {
+            console.error(error);
             Swal.fire({
               icon: "error",
               title: "업로드불가",
-              text: "엑셀파일에 비어있는 행, 열이 있는지 확인해주세요! 문제가 지속될 경우 알려주세요!",
+              text: "엑셀파일에 숨은 문자나 깨진 값이 있는 것 같습니다. 자동 정제를 추가했는데도 문제가 있으면 알려주세요!",
             });
           }
-
-          //파일 크기가 너무 큰 경우
         } else {
           Swal.fire({
             icon: "error",
             title: "업로드불가",
-            text: "엑셀파일의 크기가 너무 크네요! 중복된 시트가 없는지 확인해주세요. 문제가 지속되시면 kerbong@gmail.com으로 알려주세요!",
+            text: "엑셀파일의 크기가 너무 큽니다. 시트 중복을 확인해주세요.",
           });
           return false;
         }
       };
-
-      reader.readAsBinaryString(input.files[0]);
+      reader.readAsArrayBuffer(input.files[0]);
     } else {
       return;
     }
