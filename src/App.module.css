@@ -74,9 +74,6 @@
   align-items: center;
   border-top: 0.1px solid;
 }
-.dupli-stu-bg {
-  background-color: red;
-}
 
 .newClass-ul {
   flex-direction: column;
@@ -129,6 +126,10 @@
 .emptyBtn {
   margin: 20px;
   height: 30px;
+}
+
+.dupli-stu-bg {
+  background-color: red;
 }
 
 .fileUpload .excelLabel {
