@@ -84,6 +84,7 @@ function App() {
   const [isAiButtonDisabled, setIsAiButtonDisabled] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const [isDeveloperMode, setIsDeveloperMode] = useState(false);
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -117,7 +118,114 @@ function App() {
 
   useEffect(() => {
     callOpenAiApi();
+    checkDeveloperMode();
   }, []);
+
+  // 개발자 모드 체크 함수
+  const checkDeveloperMode = () => {
+    const savedDevKey = localStorage.getItem("dev_auth_key");
+    const envDevKey = process.env.REACT_APP_DEVELOPER_KEY;
+
+    if (savedDevKey && envDevKey && savedDevKey === envDevKey) {
+      setIsDeveloperMode(true);
+    }
+  };
+
+  // AI 호출 제한 체크 함수 (개발자는 무제한)
+  const checkAiUsageLimit = () => {
+    if (isDeveloperMode) {
+      return { allowed: true, remaining: "무제한" };
+    }
+
+    const today = new Date().toDateString();
+    const usageData = localStorage.getItem("ai_usage_data");
+
+    if (!usageData) {
+      return { allowed: true, remaining: 10 };
+    }
+
+    const { date, count } = JSON.parse(usageData);
+
+    // 날짜가 바뀌면 리셋
+    if (date !== today) {
+      return { allowed: true, remaining: 10 };
+    }
+
+    // 10회 제한
+    if (count >= 10) {
+      return { allowed: false, remaining: 0 };
+    }
+
+    return { allowed: true, remaining: 10 - count };
+  };
+
+  // AI 호출 횟수 증가 함수
+  const incrementAiUsage = () => {
+    if (isDeveloperMode) return; // 개발자는 카운트하지 않음
+
+    const today = new Date().toDateString();
+    const usageData = localStorage.getItem("ai_usage_data");
+
+    if (!usageData) {
+      localStorage.setItem("ai_usage_data", JSON.stringify({ date: today, count: 1 }));
+      return;
+    }
+
+    const { date, count } = JSON.parse(usageData);
+
+    if (date !== today) {
+      // 날짜가 바뀌면 리셋
+      localStorage.setItem("ai_usage_data", JSON.stringify({ date: today, count: 1 }));
+    } else {
+      // 기존 카운트 증가
+      localStorage.setItem("ai_usage_data", JSON.stringify({ date: today, count: count + 1 }));
+    }
+  };
+
+  // 개발자 인증 함수
+  const authenticateDeveloper = async () => {
+    const { value: devKey } = await Swal.fire({
+      title: "개발자 인증",
+      input: "password",
+      inputLabel: "개발자 키를 입력하세요",
+      inputPlaceholder: "개발자 키 입력",
+      showCancelButton: true,
+      confirmButtonText: "인증",
+      cancelButtonText: "취소",
+      confirmButtonColor: "#85bd82",
+      inputValidator: (value) => {
+        if (!value) {
+          return "개발자 키를 입력해주세요!";
+        }
+      }
+    });
+
+    if (devKey) {
+      const envDevKey = process.env.REACT_APP_DEVELOPER_KEY;
+
+      if (devKey === envDevKey) {
+        localStorage.setItem("dev_auth_key", devKey);
+        setIsDeveloperMode(true);
+
+        Swal.fire({
+          icon: "success",
+          title: "인증 성공",
+          html: `
+            <p>개발자 모드가 활성화되었습니다!</p>
+            <p style="color: #28a745; font-weight: bold;">AI 호출 제한 해제</p>
+          `,
+          confirmButtonColor: "#85bd82",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "인증 실패",
+          text: "올바르지 않은 개발자 키입니다.",
+          confirmButtonColor: "#d33",
+        });
+      }
+    }
+  };
 
   // API 키 저장 함수
   const saveApiKey = () => {
@@ -163,6 +271,7 @@ function App() {
         { role: "user", content: text },
       ],
       model: "gpt-4o-mini",
+      // model: "gpt-4o",
       temperature: 0.7,
       response_format: { type: "json_object" },
     });
@@ -179,6 +288,22 @@ function App() {
           icon: "warning",
           title: "조건 입력 필요",
           text: "학급 배치 조건을 입력해주세요!",
+          confirmButtonColor: "#85bd82",
+        });
+        return;
+      }
+
+      // AI 호출 제한 체크
+      const usageCheck = checkAiUsageLimit();
+      if (!usageCheck.allowed) {
+        Swal.fire({
+          icon: "warning",
+          title: "AI 호출 제한",
+          html: `
+            <p>오늘의 AI 편성 사용 횟수를 모두 소진했습니다.</p>
+            <p style="color: #666; font-size: 14px;">내일 다시 시도해주세요. (하루 10회 제한)</p>
+            <p style="color: #666; font-size: 12px; margin-top: 10px;">💡 개발자이신가요? 개발자 인증으로 무제한 사용 가능합니다.</p>
+          `,
           confirmButtonColor: "#85bd82",
         });
         return;
@@ -203,11 +328,90 @@ function App() {
         return;
       }
 
-      // ===== 1단계: 굿/배드 학생 균등 배치 =====
-      console.log("=== 1단계: 굿/배드 학생 균등 배치 시작 ===");
+      // ===== 0단계: 카테고리별 학생 분류 및 반당 평균 계산 =====
+      console.log("=== 0단계: 카테고리별 학생 분류 시작 ===");
 
       let new_AdaptClass = JSON.parse(JSON.stringify(nextAdaptClass));
       const classNames = CLASS_NAME[hanglOrNum].slice(0, nextAdaptClass.length);
+      const numClasses = nextAdaptClass.length;
+
+      // 전체 학생 목록
+      const allStudents = new_AdaptClass.flat();
+      const totalStudents = allStudents.length;
+
+      // 카테고리별 학생 분류
+      const categoryStats = {
+        굿: { students: [], total: 0, perClass: 0, remainder: 0 },
+        배드: { students: [], total: 0, perClass: 0, remainder: 0 },
+        생활지도: { students: [], total: 0, perClass: 0, remainder: 0 },
+        학부모: { students: [], total: 0, perClass: 0, remainder: 0 },
+        학습부진: { students: [], total: 0, perClass: 0, remainder: 0 },
+        특수반: { students: [], total: 0, perClass: 0, remainder: 0 },
+        다문화: { students: [], total: 0, perClass: 0, remainder: 0 },
+      };
+
+      allStudents.forEach((stu) => {
+        if (!stu) return;
+
+        // 협동(teamWork) 기반 분류
+        if (stu.teamWork) {
+          if (stu.teamWork.includes("굿")) {
+            categoryStats.굿.students.push(stu);
+          }
+          if (stu.teamWork.includes("배드")) {
+            categoryStats.배드.students.push(stu);
+          }
+        }
+
+        // 비고(note) 기반 분류
+        if (stu.note) {
+          const note = stu.note.toLowerCase();
+          if (note.includes("생활지도")) {
+            categoryStats.생활지도.students.push(stu);
+          }
+          if (note.includes("학부모")) {
+            categoryStats.학부모.students.push(stu);
+          }
+          if (note.includes("학습부진")) {
+            categoryStats.학습부진.students.push(stu);
+          }
+          if (note.includes("특수반") || note.includes("특수")) {
+            categoryStats.특수반.students.push(stu);
+          }
+          if (note.includes("다문화")) {
+            categoryStats.다문화.students.push(stu);
+          }
+        }
+      });
+
+      // 각 카테고리별 반당 평균 계산
+      Object.keys(categoryStats).forEach((category) => {
+        const stat = categoryStats[category];
+        stat.total = stat.students.length;
+        stat.perClass = Math.floor(stat.total / numClasses);
+        stat.remainder = stat.total % numClasses;
+      });
+
+      // 반당 평균 인원
+      const avgStudentsPerClass = Math.floor(totalStudents / numClasses);
+      const studentsRemainder = totalStudents % numClasses;
+
+      console.log("=== 카테고리별 통계 ===");
+      console.log(`전체 학생: ${totalStudents}명, 학급 수: ${numClasses}개`);
+      console.log(
+        `반당 평균 인원: ${avgStudentsPerClass}명 (나머지: ${studentsRemainder}명)`
+      );
+      Object.keys(categoryStats).forEach((category) => {
+        const stat = categoryStats[category];
+        if (stat.total > 0) {
+          console.log(
+            `${category}: 총 ${stat.total}명 → 반당 ${stat.perClass}명 (나머지: ${stat.remainder}명)`
+          );
+        }
+      });
+
+      // ===== 1단계: 굿/배드 학생 균등 배치 =====
+      console.log("=== 1단계: 굿/배드 학생 균등 배치 시작 ===");
 
       // 굿 학생 균등 배치
       let loopCount = 0;
@@ -215,7 +419,9 @@ function App() {
 
       while (loopCount++ < maxLoops) {
         let classGoodCounts = new_AdaptClass.map((cl, idx) => {
-          const goodCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("굿")).length;
+          const goodCount = cl.filter(
+            (stu) => stu && stu.teamWork && stu.teamWork.includes("굿")
+          ).length;
           return { classIndex: idx, goodCount };
         });
 
@@ -229,32 +435,50 @@ function App() {
         }
 
         // 가장 많은 반에서 굿 학생 찾기
-        let goodStudentIndex = new_AdaptClass[maxGoodClass.classIndex].findIndex(
-          stu => stu && stu.teamWork && stu.teamWork.includes("굿") && (!stu.note || stu.note.trim() === "")
+        let goodStudentIndex = new_AdaptClass[
+          maxGoodClass.classIndex
+        ].findIndex(
+          (stu) =>
+            stu &&
+            stu.teamWork &&
+            stu.teamWork.includes("굿") &&
+            (!stu.note || stu.note.trim() === "")
         );
 
         if (goodStudentIndex === -1) break;
 
         // 가장 적은 반에서 비고 없는 일반 학생 찾기
-        let normalStudentIndex = new_AdaptClass[minGoodClass.classIndex].findIndex(
-          stu => stu && (!stu.note || stu.note.trim() === "") && (!stu.teamWork || !stu.teamWork.includes("굿"))
+        let normalStudentIndex = new_AdaptClass[
+          minGoodClass.classIndex
+        ].findIndex(
+          (stu) =>
+            stu &&
+            (!stu.note || stu.note.trim() === "") &&
+            (!stu.teamWork || !stu.teamWork.includes("굿"))
         );
 
         if (normalStudentIndex === -1) break;
 
         // 교환
         let temp = new_AdaptClass[maxGoodClass.classIndex][goodStudentIndex];
-        new_AdaptClass[maxGoodClass.classIndex][goodStudentIndex] = new_AdaptClass[minGoodClass.classIndex][normalStudentIndex];
+        new_AdaptClass[maxGoodClass.classIndex][goodStudentIndex] =
+          new_AdaptClass[minGoodClass.classIndex][normalStudentIndex];
         new_AdaptClass[minGoodClass.classIndex][normalStudentIndex] = temp;
 
-        console.log(`굿 교환: ${classNames[maxGoodClass.classIndex]}반 ↔ ${classNames[minGoodClass.classIndex]}반`);
+        console.log(
+          `굿 교환: ${classNames[maxGoodClass.classIndex]}반 ↔ ${
+            classNames[minGoodClass.classIndex]
+          }반`
+        );
       }
 
       // 배드 학생 균등 배치
       loopCount = 0;
       while (loopCount++ < maxLoops) {
         let classBadCounts = new_AdaptClass.map((cl, idx) => {
-          const badCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("배드")).length;
+          const badCount = cl.filter(
+            (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+          ).length;
           return { classIndex: idx, badCount };
         });
 
@@ -269,33 +493,51 @@ function App() {
 
         // 가장 많은 반에서 배드 학생 찾기
         let badStudentIndex = new_AdaptClass[maxBadClass.classIndex].findIndex(
-          stu => stu && stu.teamWork && stu.teamWork.includes("배드") && (!stu.note || stu.note.trim() === "")
+          (stu) =>
+            stu &&
+            stu.teamWork &&
+            stu.teamWork.includes("배드") &&
+            (!stu.note || stu.note.trim() === "")
         );
 
         if (badStudentIndex === -1) break;
 
         // 가장 적은 반에서 비고 없는 일반 학생 찾기
-        let normalStudentIndex = new_AdaptClass[minBadClass.classIndex].findIndex(
-          stu => stu && (!stu.note || stu.note.trim() === "") && (!stu.teamWork || !stu.teamWork.includes("배드"))
+        let normalStudentIndex = new_AdaptClass[
+          minBadClass.classIndex
+        ].findIndex(
+          (stu) =>
+            stu &&
+            (!stu.note || stu.note.trim() === "") &&
+            (!stu.teamWork || !stu.teamWork.includes("배드"))
         );
 
         if (normalStudentIndex === -1) break;
 
         // 교환
         let temp = new_AdaptClass[maxBadClass.classIndex][badStudentIndex];
-        new_AdaptClass[maxBadClass.classIndex][badStudentIndex] = new_AdaptClass[minBadClass.classIndex][normalStudentIndex];
+        new_AdaptClass[maxBadClass.classIndex][badStudentIndex] =
+          new_AdaptClass[minBadClass.classIndex][normalStudentIndex];
         new_AdaptClass[minBadClass.classIndex][normalStudentIndex] = temp;
 
-        console.log(`배드 교환: ${classNames[maxBadClass.classIndex]}반 ↔ ${classNames[minBadClass.classIndex]}반`);
+        console.log(
+          `배드 교환: ${classNames[maxBadClass.classIndex]}반 ↔ ${
+            classNames[minBadClass.classIndex]
+          }반`
+        );
       }
 
       // 최종 굿/배드 분포 확인
       const goodDistribution = new_AdaptClass.map((cl, idx) => {
-        const goodCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("굿")).length;
+        const goodCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("굿")
+        ).length;
         return `${classNames[idx]}반: ${goodCount}명`;
       });
       const badDistribution = new_AdaptClass.map((cl, idx) => {
-        const badCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("배드")).length;
+        const badCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+        ).length;
         return `${classNames[idx]}반: ${badCount}명`;
       });
       console.log("1단계 완료 - 굿 분포:", goodDistribution.join(", "));
@@ -314,17 +556,20 @@ function App() {
 
       console.log("사용자가 언급한 학생:", Array.from(userMentionedStudents));
 
-      // 재배치 대상 학생 선별: 사용자 언급 + 비고 있음 + 배드
+      // 재배치 대상 학생 선별: 사용자 언급 + 비고 있음 (배드는 사용자가 명시한 경우만)
       let targetStudents = [];
       let remainingStudents = [];
 
       new_AdaptClass.forEach((cl, clIndex) => {
         cl.forEach((stu) => {
           const isUserMentioned = userMentionedStudents.has(stu.name);
-          const hasNote = stu.note && stu.note.trim() !== "" && !stu.note.includes("전출");
+          const hasNote =
+            stu.note && stu.note.trim() !== "" && !stu.note.includes("전출");
           const isBad = stu.teamWork && stu.teamWork.includes("배드");
 
-          if (isUserMentioned || hasNote || isBad) {
+          // 배드 학생은 사용자가 명시적으로 언급한 경우에만 GPT에게 보냄
+          // 그 외 배드 학생은 1단계 배치 그대로 고정
+          if (isUserMentioned || hasNote) {
             targetStudents.push({
               이름: stu.name,
               성별: stu.gender,
@@ -335,6 +580,7 @@ function App() {
               원본데이터: stu,
             });
           } else {
+            // 배드 학생 포함 모든 나머지 학생은 1단계 배치 유지
             remainingStudents.push({
               학생: stu,
               현재반: clIndex,
@@ -343,8 +589,21 @@ function App() {
         });
       });
 
-      console.log(`2단계 재배치 대상 학생: ${targetStudents.length}명`);
-      console.log(`2단계 유지 학생: ${remainingStudents.length}명`);
+      // 배드 학생 중 몇 명이 고정되었는지 확인
+      const fixedBadStudents = remainingStudents.filter(
+        (item) =>
+          item.학생 && item.학생.teamWork && item.학생.teamWork.includes("배드")
+      ).length;
+      const targetBadStudents = targetStudents.filter(
+        (s) => s.협동 && s.협동.includes("배드")
+      ).length;
+
+      console.log(
+        `2단계 재배치 대상 학생: ${targetStudents.length}명 (배드: ${targetBadStudents}명)`
+      );
+      console.log(
+        `2단계 유지 학생: ${remainingStudents.length}명 (고정된 배드: ${fixedBadStudents}명)`
+      );
 
       if (targetStudents.length === 0) {
         Swal.fire({
@@ -359,7 +618,9 @@ function App() {
 
       // 각 반의 현재 배드 학생 수 (1단계에서 이미 균등 배치됨)
       const currentBadPerClass = new_AdaptClass.map((cl, idx) => {
-        const badCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("배드")).length;
+        const badCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+        ).length;
         return { className: classNames[idx], badCount };
       });
 
@@ -373,11 +634,13 @@ function App() {
       let text = `아래 학생들을 각 반에 재배치해줘.\n\n`;
       text += `⚠️ 중요: 굿/배드 학생은 이미 1단계에서 균등 배치가 완료되었어!\n`;
       text += `현재 각 반의 배드 학생 수:\n`;
-      currentBadPerClass.forEach(info => {
+      currentBadPerClass.forEach((info) => {
         text += `  - ${info.className}반: 배드 ${info.badCount}명\n`;
       });
       text += `\n`;
-      text += `현재 학급 수: ${new_AdaptClass.length}개 (${classNames.join(", ")})\n`;
+      text += `현재 학급 수: ${new_AdaptClass.length}개 (${classNames.join(
+        ", "
+      )})\n`;
       text += `각 반의 평균 인원: 약 ${avgClassSize}명\n\n`;
       text += `재배치할 학생 정보 (총 ${targetStudents.length}명):\n`;
       text += `${JSON.stringify(
@@ -395,7 +658,9 @@ function App() {
 
       // 각 반의 현재 굿 학생 수
       const currentGoodPerClass = new_AdaptClass.map((cl, idx) => {
-        const goodCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("굿")).length;
+        const goodCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("굿")
+        ).length;
         return { className: classNames[idx], goodCount };
       });
 
@@ -404,7 +669,7 @@ function App() {
 
       text += `🔴 규칙 1: 굿(에이스) 학생은 절대 이동 금지!\n`;
       text += `   현재 각 반의 굿 학생 수:\n`;
-      currentGoodPerClass.forEach(info => {
+      currentGoodPerClass.forEach((info) => {
         text += `   - ${info.className}반: 굿 ${info.goodCount}명\n`;
       });
       text += `   ⚠️ 협동이 "굿"인 학생들은 이미 완벽하게 배치되어 있어.\n`;
@@ -412,24 +677,54 @@ function App() {
       text += `   ❌❌❌ 굿 학생의 now와 new는 반드시 같아야 해!\n`;
       text += `\n`;
 
-      text += `🔴 규칙 2: 배드 학생은 배드끼리만 1:1 교환 가능!\n`;
+      text += `🔴 규칙 2: 배드(마이너스) 학생은 이미 고정 배치됨!\n`;
       text += `   현재 각 반의 배드 학생 수:\n`;
-      currentBadPerClass.forEach(info => {
+      currentBadPerClass.forEach((info) => {
         text += `   - ${info.className}반: 배드 ${info.badCount}명\n`;
       });
-      text += `   ⚠️ 배드 학생을 재배치할 때는 반드시 배드끼리만 1:1 교환!\n`;
-      text += `   - 예) 가반 배드 A ↔ 나반 배드 B (각 반 배드 수 그대로)\n`;
+      text += `   ⚠️⚠️⚠️ 배드 학생은 1단계에서 이미 완벽하게 균등 배치되어 고정되었어!\n`;
+      text += `   ✅✅✅ 재배치 대상 학생 목록에 배드 학생이 포함되어 있다면, 사용자가 명시적으로 요청한 경우야!\n`;
+      text += `   ✅ 허용: 사용자가 "가반 배드학생A를 나반으로"라고 명시한 경우, 배드끼리만 1:1 교환\n`;
       text += `   ❌ 금지: 배드를 일반 학생과 교환 (배드 수가 변함)\n`;
-      text += `   ❌ 금지: 배드 학생을 다른 반으로 옮겨서 배드 수 바꾸기\n`;
+      text += `   ❌ 금지: 배드 학생을 다른 반으로 단방향 이동\n`;
+      text += `   🔥 핵심: 재배치 대상에 배드가 없으면 배드는 절대 건드리지 마!\n`;
       text += `\n`;
 
       text += `🟡 일반 규칙:\n`;
       text += `1. 사용자 조건을 최대한 만족시켜\n`;
-      text += `2. 각 반의 인원수를 최대한 균등하게 유지해 (평균 ${avgClassSize}명 기준)\n`;
+      text += `2. 각 반의 인원수를 최대한 균등하게 유지해 (평균 ${avgStudentsPerClass}명 기준, 나머지 ${studentsRemainder}명은 앞 반부터 1명씩 추가)\n`;
       text += `3. 성비도 고려해서 균형있게 배치해\n`;
-      text += `4. 비고에 특별한 내용이 있는 학생들도 균등하게 분산해\n`;
-      text += `5. 모든 학생(${targetStudents.length}명)이 반드시 포함되어야 해\n`;
-      text += `6. 배정반은 반드시 다음 중 하나여야 해: ${classNames.join(", ")}\n\n`;
+      text += `4. 모든 학생(${targetStudents.length}명)이 반드시 포함되어야 해\n`;
+      text += `5. 배정반은 반드시 다음 중 하나여야 해: ${classNames.join(
+        ", "
+      )}\n\n`;
+
+      // 카테고리별 배치 기준 추가
+      text += `🔵 카테고리별 균등 배치 기준 (매우 중요!):\n`;
+      text += `아래 카테고리별 학생들을 각 반에 균등하게 분산해야 해!\n\n`;
+
+      const categoryOrder = [
+        "생활지도",
+        "학부모",
+        "학습부진",
+        "특수반",
+        "다문화",
+      ];
+      categoryOrder.forEach((category) => {
+        const stat = categoryStats[category];
+        if (stat.total > 0) {
+          const minPerClass = stat.perClass;
+          const maxPerClass =
+            stat.remainder > 0 ? stat.perClass + 1 : stat.perClass;
+          text += `📌 ${category} 학생: 총 ${stat.total}명\n`;
+          text += `   → 각 반에 ${minPerClass}~${maxPerClass}명씩 배치해야 함\n`;
+          text += `   → ${stat.remainder}개 반은 ${maxPerClass}명, 나머지 반은 ${minPerClass}명\n`;
+        }
+      });
+      text += `\n`;
+
+      text += `⚠️ 특정 반에 위 카테고리 학생들이 몰리면 안 돼!\n`;
+      text += `예: 생활지도 학생이 특정 반에 3명 이상 배치되면 불균형!\n\n`;
       text += `IMPORTANT: Return ONLY a JSON object with "students" key containing an array.\n`;
       text += `Format: {"students": [{"이름": "홍길동", "now": "가", "new": "나"}, {"이름": "김철수", "now": "다", "new": "라"}, ...]}\n`;
       text += `Each student object MUST have:\n`;
@@ -555,6 +850,10 @@ function App() {
       let unassignedStudents = [];
       let successCount = 0;
       let goodViolations = []; // 굿 학생 이동 위반 추적
+      let badViolations = []; // 배드 학생 이동 위반 추적
+
+      // 배드 학생 이동 추적 (배드끼리만 1:1 교환이 되었는지 확인)
+      const badMovements = []; // { name, from, to, isBad }
 
       resultArray.forEach((assignment) => {
         const studentName = assignment.이름;
@@ -589,16 +888,35 @@ function App() {
         // 🚨 굿 학생 이동 검증
         const isGood = foundStudent.협동 && foundStudent.협동.includes("굿");
         if (isGood && currentClass !== newClass) {
-          console.error(`🚨 굿 학생 이동 감지! ${studentName}: ${currentClass}반 → ${newClass}반`);
-          goodViolations.push(`${studentName} (${currentClass}반 → ${newClass}반)`);
+          console.error(
+            `🚨 굿 학생 이동 감지! ${studentName}: ${currentClass}반 → ${newClass}반`
+          );
+          goodViolations.push(
+            `${studentName} (${currentClass}반 → ${newClass}반)`
+          );
           // 굿 학생은 원래 반에 유지
           const currentClassIndex = classNames.indexOf(currentClass);
           if (currentClassIndex !== -1) {
-            final_AdaptClass[currentClassIndex].push({ ...foundStudent.원본데이터 });
+            final_AdaptClass[currentClassIndex].push({
+              ...foundStudent.원본데이터,
+            });
             successCount++;
-            console.log(`✅ 굿 학생 원위치 유지: ${studentName} (${currentClass}반)`);
+            console.log(
+              `✅ 굿 학생 원위치 유지: ${studentName} (${currentClass}반)`
+            );
           }
           return;
+        }
+
+        // 배드 학생 이동 추적
+        const isBad = foundStudent.협동 && foundStudent.협동.includes("배드");
+        if (isBad && currentClass !== newClass) {
+          badMovements.push({
+            name: studentName,
+            from: currentClass,
+            to: newClass,
+            isBad: true,
+          });
         }
 
         // 새 배정반 인덱스 찾기
@@ -621,8 +939,41 @@ function App() {
 
       // 굿 학생 이동 위반 경고
       if (goodViolations.length > 0) {
-        console.warn(`⚠️ GPT가 굿 학생을 이동시키려 했으나 원위치로 복구: ${goodViolations.length}명`);
+        console.warn(
+          `⚠️ GPT가 굿 학생을 이동시키려 했으나 원위치로 복구: ${goodViolations.length}명`
+        );
         console.warn("위반 목록:", goodViolations);
+      }
+
+      // 🚨 배드 학생 이동 검증: 배드끼리만 1:1 교환되었는지 확인
+      if (badMovements.length > 0) {
+        console.log(`배드 학생 이동 감지: ${badMovements.length}건`);
+
+        // 각 배드 이동이 1:1 교환인지 확인
+        badMovements.forEach((move) => {
+          // move.from반 → move.to반으로 이동한 배드 학생
+          // 반대로 move.to반 → move.from반으로 이동한 배드 학생이 있는지 확인
+          const reverseSwap = badMovements.find(
+            (m) => m.from === move.to && m.to === move.from && m.isBad
+          );
+
+          if (!reverseSwap) {
+            // 1:1 교환이 아님 - 배드 학생이 일반 학생과 교환되었거나, 단방향 이동
+            console.error(
+              `🚨 배드 학생 부적절한 이동 감지! ${move.name}: ${move.from}반 → ${move.to}반 (역교환 없음)`
+            );
+            badViolations.push(`${move.name} (${move.from}반 → ${move.to}반)`);
+          }
+        });
+
+        if (badViolations.length > 0) {
+          console.warn(
+            `⚠️ 배드 학생 부적절한 이동이 감지되었습니다: ${badViolations.length}명`
+          );
+          console.warn("위반 목록:", badViolations);
+        } else {
+          console.log(`✅ 모든 배드 학생 이동이 배드끼리 1:1 교환으로 확인됨`);
+        }
       }
 
       console.log(
@@ -637,29 +988,36 @@ function App() {
       if (successCount !== targetStudents.length) {
         // GPT가 반환한 학생 목록
         const returnedStudents = new Set();
-        resultArray.forEach(a => {
+        resultArray.forEach((a) => {
           returnedStudents.add(`${a.이름}_${a.now}`);
         });
 
         // 누락된 학생 찾기
-        const missingStudents = targetStudents.filter(s => {
+        const missingStudents = targetStudents.filter((s) => {
           const key = `${s.이름}_${s.현재배정반}`;
           return !returnedStudents.has(key);
         });
 
-        console.error("GPT가 반환하지 않은 학생:", missingStudents.map(s => `${s.이름} (${s.현재배정반}반)`));
+        console.error(
+          "GPT가 반환하지 않은 학생:",
+          missingStudents.map((s) => `${s.이름} (${s.현재배정반}반)`)
+        );
         console.error("누락된 학생 수:", missingStudents.length);
 
         // 누락된 학생들을 현재 반에 그대로 유지
-        missingStudents.forEach(s => {
+        missingStudents.forEach((s) => {
           const currentClassIndex = classNames.indexOf(s.현재배정반);
           if (currentClassIndex !== -1 && s.원본데이터) {
             final_AdaptClass[currentClassIndex].push({ ...s.원본데이터 });
-            console.log(`⚠️ 누락된 학생을 현재 반에 유지: ${s.이름} (${s.현재배정반}반)`);
+            console.log(
+              `⚠️ 누락된 학생을 현재 반에 유지: ${s.이름} (${s.현재배정반}반)`
+            );
           }
         });
 
-        console.warn(`⚠️ GPT가 ${missingStudents.length}명을 반환하지 않아 현재 반에 유지했습니다.`);
+        console.warn(
+          `⚠️ GPT가 ${missingStudents.length}명을 반환하지 않아 현재 반에 유지했습니다.`
+        );
       }
 
       // 전체 학생 수 검증
@@ -673,35 +1031,446 @@ function App() {
 
       // 최종 굿/배드 분포 확인
       const finalGoodDistribution = final_AdaptClass.map((cl, idx) => {
-        const goodCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("굿")).length;
+        const goodCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("굿")
+        ).length;
         return `${classNames[idx]}반: ${goodCount}명`;
       });
       const finalBadDistribution = final_AdaptClass.map((cl, idx) => {
-        const badCount = cl.filter(stu => stu && stu.teamWork && stu.teamWork.includes("배드")).length;
+        const badCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+        ).length;
         return `${classNames[idx]}반: ${badCount}명`;
       });
       console.log("=== 최종 완료 ===");
       console.log("최종 굿 분포:", finalGoodDistribution.join(", "));
       console.log("최종 배드 분포:", finalBadDistribution.join(", "));
 
+      // 🚨 배드 학생 수 검증: 1단계와 최종 결과 비교
+      const finalBadPerClass = final_AdaptClass.map((cl, idx) => {
+        const badCount = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+        ).length;
+        return { className: classNames[idx], badCount };
+      });
+
+      let badCountMismatch = false;
+      currentBadPerClass.forEach((stage1, idx) => {
+        const finalBad = finalBadPerClass[idx];
+        if (stage1.badCount !== finalBad.badCount) {
+          console.error(
+            `🚨 배드 학생 수 불일치! ${stage1.className}반: 1단계 ${stage1.badCount}명 → 최종 ${finalBad.badCount}명`
+          );
+          badCountMismatch = true;
+        }
+      });
+
+      if (badCountMismatch) {
+        console.warn("⚠️⚠️⚠️ 일부 반의 배드 학생 수가 변경되었습니다!");
+        console.warn(
+          "1단계 배드 분포:",
+          currentBadPerClass
+            .map((c) => `${c.className}: ${c.badCount}명`)
+            .join(", ")
+        );
+        console.warn(
+          "최종 배드 분포:",
+          finalBadPerClass
+            .map((c) => `${c.className}: ${c.badCount}명`)
+            .join(", ")
+        );
+      } else {
+        console.log("✅ 모든 반의 배드 학생 수가 1단계와 동일하게 유지됨!");
+      }
+
+      // ===== 3단계: 인원수 균등화 후처리 =====
+      console.log("=== 3단계: 인원수 균등화 후처리 시작 ===");
+
+      // 각 반의 목표 인원수 계산
+      const targetSizes = classNames.map((_, idx) =>
+        idx < studentsRemainder ? avgStudentsPerClass + 1 : avgStudentsPerClass
+      );
+
+      console.log("목표 인원수:", targetSizes.join(", "));
+      console.log(
+        "현재 인원수:",
+        final_AdaptClass.map((cl) => cl.length).join(", ")
+      );
+
+      // 인원수 균등화 (최대 100회 반복)
+      let balanceLoopCount = 0;
+      const maxBalanceLoops = 100;
+
+      while (balanceLoopCount++ < maxBalanceLoops) {
+        // 현재 인원수 계산
+        const currentSizes = final_AdaptClass.map((cl) => cl.length);
+
+        // 가장 많은 반과 가장 적은 반 찾기
+        let maxIdx = 0,
+          minIdx = 0;
+        let maxDiff = 0,
+          minDiff = 0;
+
+        currentSizes.forEach((size, idx) => {
+          const diff = size - targetSizes[idx];
+          if (diff > maxDiff) {
+            maxDiff = diff;
+            maxIdx = idx;
+          }
+          if (diff < minDiff) {
+            minDiff = diff;
+            minIdx = idx;
+          }
+        });
+
+        // 차이가 1 이하면 균등화 완료
+        if (maxDiff <= 0 && minDiff >= 0) {
+          console.log("✅ 인원수 균등화 완료!");
+          break;
+        }
+
+        if (maxDiff <= 0 || minDiff >= 0) {
+          console.log("✅ 인원수 균등화 완료 (미세 조정 불필요)");
+          break;
+        }
+
+        // 가장 많은 반에서 이동 가능한 일반 학생 찾기 (비고 없고, 굿/배드 아닌 학생)
+        const movableStudentIdx = final_AdaptClass[maxIdx].findIndex(
+          (stu) =>
+            stu &&
+            (!stu.note || stu.note.trim() === "") &&
+            (!stu.teamWork ||
+              (!stu.teamWork.includes("굿") && !stu.teamWork.includes("배드")))
+        );
+
+        if (movableStudentIdx === -1) {
+          console.log(`⚠️ ${classNames[maxIdx]}반에서 이동 가능한 학생이 없음`);
+          break;
+        }
+
+        // 학생 이동
+        const movingStudent = final_AdaptClass[maxIdx].splice(
+          movableStudentIdx,
+          1
+        )[0];
+        final_AdaptClass[minIdx].push(movingStudent);
+
+        console.log(
+          `인원 균등화: ${movingStudent.name} ${classNames[maxIdx]}반 → ${classNames[minIdx]}반`
+        );
+      }
+
+      console.log(
+        "균등화 후 인원수:",
+        final_AdaptClass.map((cl) => cl.length).join(", ")
+      );
+
+      // ===== 4단계: 카테고리별 균등화 후처리 =====
+      console.log("=== 4단계: 카테고리별 균등화 시작 ===");
+
+      const categoriesToBalance = [
+        "생활지도",
+        "학부모",
+        "학습부진",
+        "특수반",
+        "다문화",
+      ];
+
+      categoriesToBalance.forEach((category) => {
+        const stat = categoryStats[category];
+        if (stat.total === 0) return;
+
+        const minPerClass = stat.perClass;
+        const maxPerClass =
+          stat.remainder > 0 ? stat.perClass + 1 : stat.perClass;
+
+        console.log(
+          `${category} 균등화: 반당 ${minPerClass}~${maxPerClass}명 목표`
+        );
+
+        let categoryLoopCount = 0;
+        while (categoryLoopCount++ < 100) {
+          // 각 반의 현재 해당 카테고리 학생 수
+          const classCategoryCounts = final_AdaptClass.map((cl, idx) => {
+            const count = cl.filter(
+              (stu) => stu && stu.note && stu.note.includes(category)
+            ).length;
+            return { idx, count };
+          });
+
+          // 가장 많은 반과 가장 적은 반
+          classCategoryCounts.sort((a, b) => b.count - a.count);
+          const maxClass = classCategoryCounts[0];
+          const minClass = classCategoryCounts[classCategoryCounts.length - 1];
+
+          // 차이가 1 이하면 완료
+          if (maxClass.count - minClass.count <= 1) {
+            console.log(`✅ ${category} 균등화 완료!`);
+            break;
+          }
+
+          // 가장 많은 반이 최대 허용치 초과하고, 가장 적은 반이 최소 허용치 미만인 경우에만 교환
+          if (maxClass.count <= maxPerClass && minClass.count >= minPerClass) {
+            console.log(`✅ ${category} 균등화 완료 (허용 범위 내)`);
+            break;
+          }
+
+          // 가장 많은 반에서 해당 카테고리 학생 찾기
+          const categoryStudentIdx = final_AdaptClass[maxClass.idx].findIndex(
+            (stu) =>
+              stu &&
+              stu.note &&
+              stu.note.includes(category) &&
+              (!stu.teamWork ||
+                (!stu.teamWork.includes("굿") &&
+                  !stu.teamWork.includes("배드")))
+          );
+
+          if (categoryStudentIdx === -1) break;
+
+          // 가장 적은 반에서 일반 학생 찾기 (해당 카테고리 아닌 학생)
+          const normalStudentIdx = final_AdaptClass[minClass.idx].findIndex(
+            (stu) =>
+              stu &&
+              (!stu.note || !stu.note.includes(category)) &&
+              (!stu.teamWork ||
+                (!stu.teamWork.includes("굿") &&
+                  !stu.teamWork.includes("배드")))
+          );
+
+          if (normalStudentIdx === -1) break;
+
+          // 교환
+          const temp = final_AdaptClass[maxClass.idx][categoryStudentIdx];
+          final_AdaptClass[maxClass.idx][categoryStudentIdx] =
+            final_AdaptClass[minClass.idx][normalStudentIdx];
+          final_AdaptClass[minClass.idx][normalStudentIdx] = temp;
+
+          console.log(
+            `${category} 교환: ${classNames[maxClass.idx]}반 ↔ ${
+              classNames[minClass.idx]
+            }반`
+          );
+        }
+      });
+
+      // 최종 카테고리별 분포 출력
+      console.log("=== 최종 카테고리별 분포 ===");
+      categoriesToBalance.forEach((category) => {
+        const distribution = final_AdaptClass.map((cl, idx) => {
+          const count = cl.filter(
+            (stu) => stu && stu.note && stu.note.includes(category)
+          ).length;
+          return `${classNames[idx]}:${count}`;
+        });
+        const stat = categoryStats[category];
+        if (stat.total > 0) {
+          console.log(`${category}: ${distribution.join(", ")}`);
+        }
+      });
+
+      // ===== 5단계: 굿/배드 재균등화 =====
+      console.log("=== 5단계: 굿/배드 재균등화 시작 ===");
+
+      // 굿 학생 재균등화
+      const goodStat = categoryStats.굿;
+      if (goodStat.total > 0) {
+        const goodMinPerClass = goodStat.perClass;
+        const goodMaxPerClass =
+          goodStat.remainder > 0 ? goodStat.perClass + 1 : goodStat.perClass;
+
+        console.log(`굿 균등화: 반당 ${goodMinPerClass}~${goodMaxPerClass}명 목표`);
+
+        let goodLoopCount = 0;
+        while (goodLoopCount++ < 100) {
+          const classGoodCounts = final_AdaptClass.map((cl, idx) => {
+            const count = cl.filter(
+              (stu) => stu && stu.teamWork && stu.teamWork.includes("굿")
+            ).length;
+            return { idx, count };
+          });
+
+          classGoodCounts.sort((a, b) => b.count - a.count);
+          const maxGoodClass = classGoodCounts[0];
+          const minGoodClass = classGoodCounts[classGoodCounts.length - 1];
+
+          if (maxGoodClass.count - minGoodClass.count <= 1) {
+            console.log("✅ 굿 균등화 완료!");
+            break;
+          }
+
+          // 가장 많은 반에서 굿 학생 찾기 (비고 없는 굿 학생만)
+          const goodStudentIdx = final_AdaptClass[maxGoodClass.idx].findIndex(
+            (stu) =>
+              stu &&
+              stu.teamWork &&
+              stu.teamWork.includes("굿") &&
+              (!stu.note || stu.note.trim() === "")
+          );
+
+          if (goodStudentIdx === -1) {
+            console.log("⚠️ 이동 가능한 굿 학생 없음 (모두 비고 있음)");
+            break;
+          }
+
+          // 가장 적은 반에서 일반 학생 찾기
+          const normalStudentIdx = final_AdaptClass[minGoodClass.idx].findIndex(
+            (stu) =>
+              stu &&
+              (!stu.note || stu.note.trim() === "") &&
+              (!stu.teamWork ||
+                (!stu.teamWork.includes("굿") && !stu.teamWork.includes("배드")))
+          );
+
+          if (normalStudentIdx === -1) {
+            console.log("⚠️ 교환 가능한 일반 학생 없음");
+            break;
+          }
+
+          // 교환
+          const temp = final_AdaptClass[maxGoodClass.idx][goodStudentIdx];
+          final_AdaptClass[maxGoodClass.idx][goodStudentIdx] =
+            final_AdaptClass[minGoodClass.idx][normalStudentIdx];
+          final_AdaptClass[minGoodClass.idx][normalStudentIdx] = temp;
+
+          console.log(
+            `굿 교환: ${classNames[maxGoodClass.idx]}반 ↔ ${classNames[minGoodClass.idx]}반`
+          );
+        }
+      }
+
+      // 배드 학생 재균등화
+      const badStat = categoryStats.배드;
+      if (badStat.total > 0) {
+        const badMinPerClass = badStat.perClass;
+        const badMaxPerClass =
+          badStat.remainder > 0 ? badStat.perClass + 1 : badStat.perClass;
+
+        console.log(`배드 균등화: 반당 ${badMinPerClass}~${badMaxPerClass}명 목표`);
+
+        let badLoopCount = 0;
+        while (badLoopCount++ < 100) {
+          const classBadCounts = final_AdaptClass.map((cl, idx) => {
+            const count = cl.filter(
+              (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+            ).length;
+            return { idx, count };
+          });
+
+          classBadCounts.sort((a, b) => b.count - a.count);
+          const maxBadClass = classBadCounts[0];
+          const minBadClass = classBadCounts[classBadCounts.length - 1];
+
+          if (maxBadClass.count - minBadClass.count <= 1) {
+            console.log("✅ 배드 균등화 완료!");
+            break;
+          }
+
+          // 가장 많은 반에서 배드 학생 찾기 (비고 없는 배드 학생만)
+          const badStudentIdx = final_AdaptClass[maxBadClass.idx].findIndex(
+            (stu) =>
+              stu &&
+              stu.teamWork &&
+              stu.teamWork.includes("배드") &&
+              (!stu.note || stu.note.trim() === "")
+          );
+
+          if (badStudentIdx === -1) {
+            console.log("⚠️ 이동 가능한 배드 학생 없음 (모두 비고 있음)");
+            break;
+          }
+
+          // 가장 적은 반에서 일반 학생 찾기
+          const normalStudentIdx = final_AdaptClass[minBadClass.idx].findIndex(
+            (stu) =>
+              stu &&
+              (!stu.note || stu.note.trim() === "") &&
+              (!stu.teamWork ||
+                (!stu.teamWork.includes("굿") && !stu.teamWork.includes("배드")))
+          );
+
+          if (normalStudentIdx === -1) {
+            console.log("⚠️ 교환 가능한 일반 학생 없음");
+            break;
+          }
+
+          // 교환
+          const temp = final_AdaptClass[maxBadClass.idx][badStudentIdx];
+          final_AdaptClass[maxBadClass.idx][badStudentIdx] =
+            final_AdaptClass[minBadClass.idx][normalStudentIdx];
+          final_AdaptClass[minBadClass.idx][normalStudentIdx] = temp;
+
+          console.log(
+            `배드 교환: ${classNames[maxBadClass.idx]}반 ↔ ${classNames[minBadClass.idx]}반`
+          );
+        }
+      }
+
+      // 최종 굿/배드 분포 출력
+      const finalGoodDist = final_AdaptClass.map((cl, idx) => {
+        const count = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("굿")
+        ).length;
+        return `${classNames[idx]}:${count}`;
+      });
+      const finalBadDist = final_AdaptClass.map((cl, idx) => {
+        const count = cl.filter(
+          (stu) => stu && stu.teamWork && stu.teamWork.includes("배드")
+        ).length;
+        return `${classNames[idx]}:${count}`;
+      });
+      console.log(`최종 굿 분포: ${finalGoodDist.join(", ")}`);
+      console.log(`최종 배드 분포: ${finalBadDist.join(", ")}`);
+
       setNextAdaptClass([...final_AdaptClass]);
       setShowAiModal(false);
+
+      // AI 호출 횟수 증가
+      incrementAiUsage();
+      const updatedUsage = checkAiUsageLimit();
+
       setIsAiButtonDisabled(false);
 
-      // AI 편성 완료 알림
+      // AI 편성 완료 알림 메시지 구성
+      let completionMessage = `
+        <p style="font-weight: bold; color: #28a745;">✅ 1단계: 굿/배드 초기 균등 배치</p>
+        <p style="font-weight: bold; color: #28a745;">✅ 2단계: AI 재배치 (${successCount}명)</p>
+        <p style="font-weight: bold; color: #28a745;">✅ 3단계: 인원수 균등화</p>
+        <p style="font-weight: bold; color: #28a745;">✅ 4단계: 카테고리별 균등화</p>
+        <p style="font-size: 13px; color: #666;">(생활지도/학부모/학습부진/특수반/다문화)</p>
+        <p style="font-weight: bold; color: #28a745;">✅ 5단계: 굿/배드 최종 균등화</p>
+      `;
+
+      // 굿 학생 위반이 있었다면 표시
+      if (goodViolations.length > 0) {
+        completionMessage += `<p style="color: #ff9800; font-size: 14px;">⚠️ 굿 학생 ${goodViolations.length}명 원위치 복구됨</p>`;
+      }
+
+      // 배드 학생 위반이 있었다면 경고 표시
+      if (badViolations.length > 0) {
+        completionMessage += `<p style="color: #ff5722; font-size: 14px;">⚠️ 배드 학생 부적절한 이동 ${badViolations.length}건 감지</p>`;
+      }
+
+      // 배드 학생 수 불일치가 있다면 경고
+      if (badCountMismatch) {
+        completionMessage += `<p style="color: #f44336; font-weight: bold;">🚨 일부 반의 배드 학생 수가 변경되었습니다!</p>`;
+      }
+
+      completionMessage += `
+        <br>
+        <p style="color: #666; font-size: 14px;">
+          💡 AI 편성이 완료되었습니다!<br>
+          필요시 "2. 자동배분"으로 추가 조정 가능합니다.
+        </p>
+        <p style="color: ${updatedUsage.remaining === 0 ? '#f44336' : '#2196F3'}; font-size: 13px; margin-top: 10px;">
+          ${isDeveloperMode ? '🔓 개발자 모드: 무제한' : `📊 오늘 남은 AI 편성 횟수: ${updatedUsage.remaining}회`}
+        </p>
+      `;
+
       Swal.fire({
         icon: "success",
         title: "AI 학급 편성 완료",
-        html: `
-          <p style="font-weight: bold; color: #28a745;">✅ 1단계: 굿/배드 학생 균등 배치 완료</p>
-          <p style="font-weight: bold; color: #28a745;">✅ 2단계: AI 재배치 완료 (${successCount}명)</p>
-          <p>유지된 학생: ${remainingStudents.length}명</p>
-          <br>
-          <p style="color: #666; font-size: 14px;">
-            💡 Tip: "2. 자동배분" 버튼을 클릭하면<br>
-            전체 균형을 더욱 최적화할 수 있습니다!
-          </p>
-        `,
+        html: completionMessage,
         confirmButtonColor: "#85bd82",
       });
     } catch (error) {
@@ -976,176 +1745,6 @@ function App() {
     });
   };
 
-  // AI를 이용한 성비 균형 맞추기 함수
-  const balanceGenderWithAI = async (classArray) => {
-    try {
-      const openai = await callOpenAiApi();
-      if (!openai) {
-        console.warn("OpenAI API 사용 불가, 기본 성비 균형 로직으로 진행");
-        return;
-      }
-
-      const classNames = CLASS_NAME[hanglOrNum].slice(0, classArray.length);
-
-      // 전체 남녀 평균 성비 계산
-      let totalMale = 0;
-      let totalFemale = 0;
-      classArray.forEach((cl) => {
-        totalMale += cl.filter((stu) => stu.gender === "남").length;
-        totalFemale += cl.filter((stu) => stu.gender === "여").length;
-      });
-      const avgMalePerClass = Math.round(totalMale / classArray.length);
-      const avgFemalePerClass = Math.round(totalFemale / classArray.length);
-
-      // 각 반의 현재 성비 정보
-      let classGenderInfo = classArray.map((cl, idx) => {
-        const maleCount = cl.filter((stu) => stu.gender === "남").length;
-        const femaleCount = cl.filter((stu) => stu.gender === "여").length;
-        const noteCount = cl.filter(
-          (stu) => stu.note && stu.note.trim() !== ""
-        ).length;
-        const aceCount = cl.filter((stu) =>
-          stu.teamWork?.includes("굿")
-        ).length;
-        const badCount = cl.filter((stu) =>
-          stu.teamWork?.includes("배드")
-        ).length;
-
-        return {
-          반: classNames[idx],
-          남학생수: maleCount,
-          여학생수: femaleCount,
-          비고있는학생: noteCount,
-          에이스: aceCount,
-          마이너스: badCount,
-        };
-      });
-
-      // 비고 없는 학생들만 추출
-      let normalStudents = [];
-      classArray.forEach((cl, clIdx) => {
-        cl.forEach((stu) => {
-          const hasNote = stu.note && stu.note.trim() !== "";
-          const isAce = stu.teamWork?.includes("굿");
-          const isBad = stu.teamWork?.includes("배드");
-
-          if (!hasNote && !isAce && !isBad) {
-            normalStudents.push({
-              이름: stu.name,
-              성별: stu.gender,
-              현재반: classNames[clIdx],
-              원본데이터: stu,
-            });
-          }
-        });
-      });
-
-      console.log(
-        `성비 균형 대상: ${normalStudents.length}명 (비고/에이스/마이너스 제외)`
-      );
-
-      if (normalStudents.length < 4) {
-        console.log("성비 조정 대상 학생이 부족하여 건너뜁니다.");
-        return;
-      }
-
-      // GPT 프롬프트 구성
-      let text = `학급별 성비 균형을 맞추기 위해 학생들을 재배치해줘.\n\n`;
-      text += `목표 성비: 각 반당 남학생 약 ${avgMalePerClass}명, 여학생 약 ${avgFemalePerClass}명\n\n`;
-      text += `현재 각 반의 상황:\n${JSON.stringify(
-        classGenderInfo,
-        null,
-        2
-      )}\n\n`;
-      text += `재배치 가능한 학생 (비고/에이스/마이너스 제외, ${normalStudents.length}명):\n`;
-      text += `${JSON.stringify(
-        normalStudents.map((s) => ({
-          이름: s.이름,
-          성별: s.성별,
-          현재반: s.현재반,
-        })),
-        null,
-        2
-      )}\n\n`;
-      text += `조건:\n`;
-      text += `1. 위 "재배치 가능한 학생" 목록의 학생들만 재배치할 수 있어\n`;
-      text += `2. 각 반의 남녀 성비가 목표 성비(남 ${avgMalePerClass}명, 여 ${avgFemalePerClass}명)에 최대한 가깝게\n`;
-      text += `3. 모든 반의 성비 차이를 최소화해\n`;
-      text += `4. 재배치가 필요 없는 학생은 현재반 그대로 유지\n`;
-      text += `5. 재배치할 학생만 응답에 포함 (현재반과 다른 반으로 배정되는 학생만)\n\n`;
-      text += `IMPORTANT: Return ONLY a JSON object with "students" key.\n`;
-      text += `Format: {"students": [{"이름": "홍길동", "now": "가", "new": "나"}, ...]}\n`;
-      text += `Only include students who need to be moved (now ≠ new).\n`;
-      text += `If no changes needed, return: {"students": []}\n`;
-
-      console.log("성비 균형 GPT 프롬프트:", text);
-
-      // GPT API 호출
-      let resultContent = await gptResult(text, openai);
-      console.log("성비 균형 GPT 응답:", resultContent);
-
-      // JSON 파싱
-      let cleanedContent = resultContent
-        .replace(/```json\s*/g, "")
-        .replace(/```\s*/g, "")
-        .trim();
-
-      let parsedResponse = JSON.parse(cleanedContent);
-      let resultArray = parsedResponse.students || parsedResponse;
-
-      if (!Array.isArray(resultArray)) {
-        console.warn("성비 균형 응답이 배열이 아닙니다:", resultArray);
-        return;
-      }
-
-      if (resultArray.length === 0) {
-        console.log("성비 균형이 이미 적절하여 재배치가 필요 없습니다.");
-        return;
-      }
-
-      console.log(`성비 균형 재배치: ${resultArray.length}명`);
-
-      // 재배치 실행
-      resultArray.forEach((assignment) => {
-        const studentName = assignment.이름;
-        const currentClass = assignment.now;
-        const newClass = assignment.new;
-
-        if (!studentName || !currentClass || !newClass) return;
-        if (currentClass === newClass) return; // 같은 반이면 스킵
-
-        const currentClassIndex = classNames.indexOf(currentClass);
-        const newClassIndex = classNames.indexOf(newClass);
-
-        if (currentClassIndex === -1 || newClassIndex === -1) {
-          console.warn(`잘못된 반 정보: ${currentClass} → ${newClass}`);
-          return;
-        }
-
-        // 학생 찾기 및 이동
-        const studentIndex = classArray[currentClassIndex].findIndex(
-          (stu) => stu.name === studentName
-        );
-
-        if (studentIndex !== -1) {
-          const student = classArray[currentClassIndex].splice(
-            studentIndex,
-            1
-          )[0];
-          classArray[newClassIndex].push(student);
-          console.log(
-            `성비 조정: ${studentName} (${currentClass}반 → ${newClass}반)`
-          );
-        }
-      });
-
-      console.log("성비 균형 완료");
-    } catch (error) {
-      console.error("AI 성비 균형 오류:", error);
-      console.log("기본 성비 균형 로직으로 진행하지 않고 건너뜁니다.");
-    }
-  };
-
   // 자동배분 진행 상황 업데이트 함수
   const updateAutoDistributeProgress = (step, message) => {
     const progressDiv = document.getElementById("auto-distribute-progress");
@@ -1336,60 +1935,14 @@ function App() {
       // 2차 시작 - 에이스(굿) 학생 균등 배분
       updateAutoDistributeProgress(
         2,
-        "에이스(굿) 학생들을 균등하게 배치하고 있습니다..."
+        "굿 학생은 이미 고정 배치되어 유지됩니다..."
       );
       await new Promise((resolve) => setTimeout(resolve, 300)); // UI 업데이트 대기
 
-      // 2차: 에이스(굿) 학생 균등 배치 (협동에 "굿" 포함된 모든 학생)
-      let classAceCount = new_AdaptClass.map(
-        (cl) =>
-          (cl || []).filter((stu) => stu && stu.teamWork?.includes("굿")).length
+      // 2차는 스킵 - 굿(에이스) 학생은 AI편성에서 이미 고정되었음
+      console.log(
+        "🔒 굿(에이스) 학생은 AI편성에서 이미 균등 배치되어 고정됨 - 자동배분에서는 이동시키지 않음"
       );
-
-      if (classAceCount.length > 0) {
-        let loopCount = 0;
-        const maxLoops = 1000;
-        while (Math.max(...classAceCount) - Math.min(...classAceCount) > 1) {
-          if (loopCount++ > maxLoops) break;
-
-          let maxClassIndex = classAceCount.indexOf(Math.max(...classAceCount));
-          let minClassIndex = classAceCount.indexOf(Math.min(...classAceCount));
-
-          if (maxClassIndex === -1 || minClassIndex === -1) break;
-          if (!new_AdaptClass[maxClassIndex] || !new_AdaptClass[minClassIndex])
-            break;
-
-          // 가장 많은 반에서 굿 학생 찾기 (비고 유무 관계없이)
-          let aceStudentIndex = new_AdaptClass[maxClassIndex].findIndex(
-            (stu) => stu && stu.teamWork?.includes("굿")
-          );
-
-          if (aceStudentIndex === -1) break;
-
-          // 가장 적은 반에서 비고가 없고 굿이 아닌 학생 찾기
-          let normalStudentIndex = new_AdaptClass[minClassIndex].findIndex(
-            (stu) =>
-              stu &&
-              (!stu.note || stu.note.trim() === "") &&
-              (!stu.teamWork || !stu.teamWork.includes("굿"))
-          );
-
-          if (normalStudentIndex === -1) break;
-
-          // 두 학생 교환
-          let temp = new_AdaptClass[maxClassIndex][aceStudentIndex];
-          new_AdaptClass[maxClassIndex][aceStudentIndex] =
-            new_AdaptClass[minClassIndex][normalStudentIndex];
-          new_AdaptClass[minClassIndex][normalStudentIndex] = temp;
-
-          // 카운트 업데이트
-          classAceCount = new_AdaptClass.map(
-            (cl) =>
-              (cl || []).filter((stu) => stu && stu.teamWork?.includes("굿"))
-                .length
-          );
-        }
-      }
 
       // 3차 시작
       updateAutoDistributeProgress(
@@ -1477,67 +2030,16 @@ function App() {
       }
 
       // 4차 시작 - 배드 학생 균등 배분
+      // 4차는 스킵 - 배드 학생은 AI편성에서 이미 고정되었음
       updateAutoDistributeProgress(
         4,
-        "배드 학생들을 균등하게 배치하고 있습니다..."
+        "배드/굿 학생은 이미 고정 배치되어 유지됩니다..."
       );
       await new Promise((resolve) => setTimeout(resolve, 300)); // UI 업데이트 대기
 
-      // 4차: "배드" 학생 균등 배치 (비고가 없는 학생들 기준으로만)
-      // 굿(에이스)은 2차에서 이미 처리했으므로 배드만 처리
-      let classBadCount = new_AdaptClass.map(
-        (cl) =>
-          (cl || []).filter((stu) => stu && stu.teamWork?.includes("배드"))
-            .length
+      console.log(
+        "🔒 배드 학생과 굿 학생은 AI편성에서 이미 균등 배치되어 고정됨 - 자동배분에서는 이동시키지 않음"
       );
-
-      if (classBadCount.length > 0) {
-        let loopCount = 0;
-        const maxLoops = 1000;
-        while (Math.max(...classBadCount) - Math.min(...classBadCount) > 1) {
-          if (loopCount++ > maxLoops) break;
-
-          let maxClassIndex = classBadCount.indexOf(Math.max(...classBadCount));
-          let minClassIndex = classBadCount.indexOf(Math.min(...classBadCount));
-
-          if (maxClassIndex === -1 || minClassIndex === -1) break;
-          if (!new_AdaptClass[maxClassIndex] || !new_AdaptClass[minClassIndex])
-            break;
-
-          // 가장 많은 반에서 배드 학생 중 비고가 없는 학생 찾기
-          let badStudentIndex = new_AdaptClass[maxClassIndex].findIndex(
-            (stu) =>
-              stu &&
-              stu.teamWork?.includes("배드") &&
-              (!stu.note || stu.note.trim() === "")
-          );
-
-          if (badStudentIndex === -1) break;
-
-          // 가장 적은 반에서 비고가 없고 배드가 아닌 학생 찾기
-          let normalStudentIndex = new_AdaptClass[minClassIndex].findIndex(
-            (stu) =>
-              stu &&
-              (!stu.note || stu.note.trim() === "") &&
-              (!stu.teamWork || !stu.teamWork.includes("배드"))
-          );
-
-          if (normalStudentIndex === -1) break;
-
-          // 두 학생 교환
-          let temp = new_AdaptClass[maxClassIndex][badStudentIndex];
-          new_AdaptClass[maxClassIndex][badStudentIndex] =
-            new_AdaptClass[minClassIndex][normalStudentIndex];
-          new_AdaptClass[minClassIndex][normalStudentIndex] = temp;
-
-          // 카운트 업데이트
-          classBadCount = new_AdaptClass.map(
-            (cl) =>
-              (cl || []).filter((stu) => stu && stu.teamWork?.includes("배드"))
-                .length
-          );
-        }
-      }
 
       // 5차 시작 - 성비 및 인원수 균형
       updateAutoDistributeProgress(
@@ -1582,12 +2084,14 @@ function App() {
         if (!new_AdaptClass[maxClassIndex] || !new_AdaptClass[minClassIndex])
           break;
 
-        // 가장 많은 반에서 비고가 없는 학생 찾기 (특수반이 아닌 학생만)
+        // 가장 많은 반에서 비고가 없는 학생 찾기 (특수반, 굿, 배드가 아닌 학생만)
         let studentIndex = new_AdaptClass[maxClassIndex].findIndex(
           (stu) =>
             stu &&
             (!stu.note || stu.note.trim() === "") &&
-            !(stu.note && stu.note.includes("특수반"))
+            !(stu.note && stu.note.includes("특수반")) &&
+            (!stu.teamWork ||
+              (!stu.teamWork.includes("굿") && !stu.teamWork.includes("배드")))
         );
 
         if (studentIndex === -1) break;
@@ -1692,22 +2196,26 @@ function App() {
 
         if (!targetClass) break;
 
-        // worstClass에서 needLessGender 학생 중 비고 없는 학생 찾기
+        // worstClass에서 needLessGender 학생 중 비고 없는 학생 찾기 (굿, 배드 제외)
         let student1Index = new_AdaptClass[worstClass.classIndex].findIndex(
           (stu) =>
             stu &&
             stu.gender === needLessGender &&
-            (!stu.note || stu.note.trim() === "")
+            (!stu.note || stu.note.trim() === "") &&
+            (!stu.teamWork ||
+              (!stu.teamWork.includes("굿") && !stu.teamWork.includes("배드")))
         );
 
         if (student1Index === -1) break;
 
-        // targetClass에서 needMoreGender 학생 중 비고 없는 학생 찾기
+        // targetClass에서 needMoreGender 학생 중 비고 없는 학생 찾기 (굿, 배드 제외)
         let student2Index = new_AdaptClass[targetClass.classIndex].findIndex(
           (stu) =>
             stu &&
             stu.gender === needMoreGender &&
-            (!stu.note || stu.note.trim() === "")
+            (!stu.note || stu.note.trim() === "") &&
+            (!stu.teamWork ||
+              (!stu.teamWork.includes("굿") && !stu.teamWork.includes("배드")))
         );
 
         if (student2Index === -1) break;
@@ -2410,6 +2918,18 @@ function App() {
                   초안 생성하기 🤖
                 </button>
                 <button
+                  onClick={authenticateDeveloper}
+                  className={classes["settingBtn"]}
+                  style={{
+                    marginRight: "10px",
+                    backgroundColor: isDeveloperMode ? "#4CAF50" : "#2196F3",
+                    color: "white"
+                  }}
+                  title={isDeveloperMode ? "개발자 모드 활성화됨" : "개발자 인증 (무제한 사용)"}
+                >
+                  {isDeveloperMode ? "🔓 개발자 모드" : "🔐 개발자 인증"}
+                </button>
+                <button
                   onClick={() => {
                     setShowAiModal(false);
                     setAiConditionInput("");
@@ -2645,13 +3165,7 @@ function App() {
                   마이너스 -{" "}
                   {cl.filter((stu) => stu.teamWork.includes("배드")).length} 명
                 </div>
-                <div
-                  className={classes["specialStudent"]}
-                  title="비고에 '특수반' 기록 학생 수"
-                >
-                  특수반 -{" "}
-                  {cl.filter((stu) => stu.note.includes("특수반")).length} 명
-                </div>
+
                 <div
                   className={classes["grayBack"]}
                   title="비고에 '쌍둥이' 혹은 '쌍생아' 기록 학생 수"
@@ -2688,10 +3202,7 @@ function App() {
                   학부모 -{" "}
                   {cl.filter((stu) => stu.note.includes("학부모")).length} 명
                 </div>
-                <div title="비고에 '전출' 기록 학생 수">
-                  전출예정 -{" "}
-                  {cl.filter((stu) => stu.note.includes("전출")).length} 명
-                </div>
+
                 <div title="전출학생 제외한 비고 존재 학생 수">
                   비고 -{" "}
                   {
@@ -2701,13 +3212,29 @@ function App() {
                     ).length
                   }
                 </div>
+                <div title="비고에 '전출' 기록 학생 수">
+                  전출예정 -{" "}
+                  {cl.filter((stu) => stu.note.includes("전출")).length} 명
+                </div>
                 <div
                   className={classes["grayBack"]}
                   style={{ fontSize: "20px" }}
                 >
                   남 {cl.filter((stu) => stu.gender === "남").length} / 여{" "}
                   {cl.filter((stu) => stu.gender === "여").length} <br /> 총{" "}
-                  {cl.length}명
+                  {cl.length}명 <br />
+                  <hr />
+                  <span style={{ fontSize: "10px" }}>전출제외</span>{" "}
+                  {cl.length -
+                    cl.filter((stu) => stu.note.includes("전출")).length}{" "}
+                  명
+                </div>
+                <div
+                  className={classes["specialStudent"]}
+                  title="비고에 '특수반' 기록 학생 수"
+                >
+                  특수반 -{" "}
+                  {cl.filter((stu) => stu.note.includes("특수반")).length} 명
                 </div>
               </div>
             ))}
