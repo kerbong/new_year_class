@@ -560,6 +560,11 @@ function App() {
       let targetStudents = [];
       let remainingStudents = [];
 
+      // 원본 데이터의 비고 정보 확인
+      const originalStudentsWithNote = new_AdaptClass.flat().filter(s => s && s.note && s.note.trim() !== "");
+      console.log(`📋 원본 데이터: 비고 있는 학생 ${originalStudentsWithNote.length}명`);
+      console.log("원본 비고 샘플:", originalStudentsWithNote.slice(0, 3).map(s => `${s.name}: ${s.note}`));
+
       new_AdaptClass.forEach((cl, clIndex) => {
         cl.forEach((stu) => {
           const isUserMentioned = userMentionedStudents.has(stu.name);
@@ -604,6 +609,11 @@ function App() {
       console.log(
         `2단계 유지 학생: ${remainingStudents.length}명 (고정된 배드: ${fixedBadStudents}명)`
       );
+
+      // 재배치 대상 학생의 비고 정보 확인
+      const targetWithNote = targetStudents.filter(s => s.비고 && s.비고.trim() !== "");
+      console.log(`✅ 재배치 대상 중 비고 있는 학생: ${targetWithNote.length}명`);
+      console.log("재배치 대상 비고 샘플:", targetWithNote.slice(0, 3).map(s => `${s.이름}: ${s.비고}`));
 
       if (targetStudents.length === 0) {
         Swal.fire({
@@ -838,13 +848,17 @@ function App() {
         .map(() => []);
 
       remainingStudents.forEach((item) => {
-        final_AdaptClass[item.현재반].push(item.학생);
+        final_AdaptClass[item.현재반].push({ ...item.학생 });
       });
 
       console.log(
         "유지 학생 배치 후 각 반 인원:",
         final_AdaptClass.map((cl) => cl.length)
       );
+
+      // 비고 정보 유지 확인
+      const studentsWithNote = final_AdaptClass.flat().filter(s => s.note && s.note.trim() !== "");
+      console.log(`✅ 유지 학생 중 비고 있는 학생: ${studentsWithNote.length}명`);
 
       // 2-2단계: GPT 응답에 따라 재배치 대상 학생들을 새 반에 배치
       let unassignedStudents = [];
@@ -936,6 +950,10 @@ function App() {
         final_AdaptClass[newClassIndex].push({ ...foundStudent.원본데이터 });
         successCount++;
       });
+
+      // 재배치 후 비고 정보 유지 확인
+      const reassignedWithNote = final_AdaptClass.flat().filter(s => s.note && s.note.trim() !== "");
+      console.log(`✅ 재배치 후 비고 있는 학생: ${reassignedWithNote.length}명`);
 
       // 굿 학생 이동 위반 경고
       if (goodViolations.length > 0) {
@@ -1421,6 +1439,11 @@ function App() {
       });
       console.log(`최종 굿 분포: ${finalGoodDist.join(", ")}`);
       console.log(`최종 배드 분포: ${finalBadDist.join(", ")}`);
+
+      // 최종 비고 정보 유지 확인
+      const finalStudentsWithNote = final_AdaptClass.flat().filter(s => s && s.note && s.note.trim() !== "");
+      console.log(`🎯 최종 결과: 비고 있는 학생 ${finalStudentsWithNote.length}명`);
+      console.log("비고 샘플:", finalStudentsWithNote.slice(0, 3).map(s => `${s.name}: ${s.note}`));
 
       setNextAdaptClass([...final_AdaptClass]);
       setShowAiModal(false);
