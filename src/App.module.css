@@ -14,7 +14,7 @@
   border-radius: 20px;
   border-width: 0;
   box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
-  margin: 20px;
+  margin: 10px;
 }
 
 .settingBtn {
@@ -78,15 +78,18 @@
 .newClass-ul {
   flex-direction: column;
   padding: 5px;
+  margin-bottom: 0px;
 }
 
 .newClassSpan-name {
   flex-basis: 35%;
+  cursor: pointer;
 }
 .newClassSpan-gender,
 .newClassSpan-exClass,
 .newClassSpan-score {
   flex-basis: 12%;
+  cursor: pointer;
 }
 
 .newClassSpan-note {
@@ -257,4 +260,105 @@
   background-color: #5f9ea059;
   border-radius: 20px;
   line-height: 2;
+}
+
+/* ============================================================ */
+/* 비고 편집 모달 스타일 */
+/* ============================================================ */
+
+.category-btn {
+  transition: all 0.2s ease;
+}
+
+.category-btn:hover {
+  background-color: #f5f5f5 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.category-btn-selected {
+  background-color: #4a7c59 !important;
+  color: white !important;
+  border-color: #3a6547 !important;
+  font-weight: bold;
+  box-shadow: 0 3px 6px rgba(74, 124, 89, 0.4);
+}
+
+.category-btn-selected:hover {
+  background-color: #3a6547 !important;
+}
+
+/* ============================================================ */
+/* 인쇄 스타일 */
+/* ============================================================ */
+
+@media print {
+  /* 인쇄 시 다른 요소들 숨기기 */
+  body * {
+    visibility: hidden;
+  }
+
+  /* 학급 배치 영역만 표시 */
+  .newClass-div,
+  .newClass-div * {
+    visibility: visible;
+  }
+
+  .newClass-div {
+    position: static !important;
+    width: 100%;
+    margin: 0;
+    padding: 10px;
+  }
+
+  /* 버튼들 숨기기 */
+  button,
+  .settingBtn,
+  .emptyBtn {
+    display: none !important;
+  }
+
+  /* 설명, AI 모달 등 숨기기 */
+  .explainDiv,
+  .how-to-use {
+    display: none !important;
+  }
+
+  /* 페이지 설정 */
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  /* 학급 카드 스타일 조정 */
+  .newClass-li {
+    page-break-inside: avoid;
+  }
+
+  /* 폰트 크기 조정 */
+  .newClass-div {
+    font-size: 10px;
+  }
+
+  /* 학급 카드들을 가로로 배치 */
+  .newClass-ul {
+    display: inline-block;
+    vertical-align: top;
+  }
+}
+
+/* ============================================================ */
+/* 현재학급 필터 강조 스타일 */
+/* ============================================================ */
+
+.highlightedExClassMale {
+  background-color: #fff59d !important;
+  border: 2px solid #fbc02d !important;
+  box-shadow: 0 0 8px rgba(251, 192, 45, 0.5);
+}
+
+.highlightedExClassFemale {
+  background-color: #fbc02d !important;
+  border: 2px solid #f9a825 !important;
+  box-shadow: 0 0 8px rgba(249, 168, 37, 0.5);
 }

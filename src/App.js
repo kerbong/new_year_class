@@ -85,6 +85,7 @@ function App() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
+  const [selectedExClasses, setSelectedExClasses] = useState([]); // 현재학급 필터
 
   const classInput = useRef();
   const gradeInput = useRef();
@@ -1555,6 +1556,36 @@ function App() {
     setOrderOriginClass((prev) => !prev);
   };
 
+  // 이름순 정렬
+  const orderByName = () => {
+    let new_wholeClass = [];
+    nextAdaptClass.forEach((cl) => {
+      let sortedClass = [...cl].sort((a, b) => {
+        return a.name?.localeCompare(b.name);
+      });
+      new_wholeClass.push(sortedClass);
+    });
+    setNextAdaptClass(new_wholeClass);
+  };
+
+  // 학급순 정렬
+  const orderByExClassNum = () => {
+    let new_wholeClass = [];
+    nextAdaptClass.forEach((cl) => {
+      let sortedClass = [...cl].sort((a, b) => {
+        const numA = parseInt(a.exClass);
+        const numB = parseInt(b.exClass);
+        if (numA !== numB) {
+          return numA - numB;
+        }
+        // 같은 학급이면 번호순
+        return (a.num || 0) - (b.num || 0);
+      });
+      new_wholeClass.push(sortedClass);
+    });
+    setNextAdaptClass(new_wholeClass);
+  };
+
   // 남, 여학생 모아서 내림차순 정렬하기
   const orderByGenderName = (nextWholeClass, how) => {
     let new_wholeClass = [];
@@ -2618,6 +2649,332 @@ function App() {
     writeFile(book3, `내년도 학급편성자료(기존학급기준).xlsx`);
   };
 
+  // ============================================================
+  // 비고 편집 관련 상수 및 함수들
+  // ============================================================
+
+  // 11개 카테고리 버튼 (레벨 포함)
+  const NOTE_CATEGORIES = [
+    "생활지도-상", "생활지도-중", "생활지도-하",
+    "학부모-상", "학부모-중", "학부모-하",
+    "학습부진", "특수반", "다문화", "쌍둥이", "전출"
+  ];
+
+  // 기존 비고 파싱 함수
+  function parseExistingNote(noteString) {
+    if (!noteString || noteString.trim() === "") {
+      return { categories: [], freeText: "" };
+    }
+
+    const parts = noteString.split(",").map(p => p.trim());
+    const categories = [];
+    let freeText = "";
+
+    parts.forEach(part => {
+      if (NOTE_CATEGORIES.includes(part)) {
+        categories.push(part);
+      } else {
+        // 카테고리가 아닌 경우 자유 입력으로 간주
+        freeText += (freeText ? ", " : "") + part;
+      }
+    });
+
+    return { categories, freeText };
+  }
+
+  // 비고 문자열 조합 함수
+  function buildNoteString() {
+    if (!window.noteEditorState) return "";
+
+    const { selectedCategories, freeText } = window.noteEditorState;
+    const parts = [...selectedCategories];
+
+    if (freeText && freeText.trim()) {
+      parts.push(freeText.trim());
+    }
+
+    return parts.join(", ");
+  }
+
+  // 카테고리 토글 함수 (Window 객체에 노출)
+  window.toggleCategory = (category) => {
+    if (!window.noteEditorState) return;
+
+    const { selectedCategories } = window.noteEditorState;
+    const index = selectedCategories.indexOf(category);
+
+    if (index > -1) {
+      selectedCategories.splice(index, 1);
+    } else {
+      selectedCategories.push(category);
+    }
+
+    // 버튼 UI 업데이트
+    const btn = document.querySelector(`[data-category="${category}"]`);
+    if (btn) {
+      if (index > -1) {
+        btn.classList.remove("category-btn-selected");
+      } else {
+        btn.classList.add("category-btn-selected");
+      }
+    }
+
+    updatePreview();
+  };
+
+  // 모두 삭제 함수 (Window 객체에 노출)
+  window.clearAllCategories = () => {
+    if (!window.noteEditorState) return;
+
+    // 모든 카테고리 선택 해제
+    window.noteEditorState.selectedCategories = [];
+
+    // 모든 버튼 선택 해제
+    document.querySelectorAll('.category-btn-selected').forEach(btn => {
+      btn.classList.remove('category-btn-selected');
+    });
+
+    // 자유 입력 필드 비우기
+    const freeTextInput = document.getElementById("free-note");
+    if (freeTextInput) {
+      freeTextInput.value = "";
+      window.noteEditorState.freeText = "";
+    }
+
+    updatePreview();
+  };
+
+  // 에이스/마이너스 토글 함수 (Window 객체에 노출)
+  window.toggleTeamWork = (type) => {
+    if (!window.noteEditorState) return;
+
+    // 현재 선택된 타입과 같으면 해제, 다르면 변경
+    if (window.noteEditorState.teamWork === type) {
+      window.noteEditorState.teamWork = "";
+    } else {
+      window.noteEditorState.teamWork = type;
+    }
+
+    // UI 업데이트
+    const aceBtn = document.getElementById("ace-btn");
+    const minusBtn = document.getElementById("minus-btn");
+
+    if (aceBtn && minusBtn) {
+      aceBtn.style.opacity = window.noteEditorState.teamWork === "굿" ? "1" : "0.5";
+      aceBtn.style.fontWeight = window.noteEditorState.teamWork === "굿" ? "bold" : "normal";
+
+      minusBtn.style.opacity = window.noteEditorState.teamWork === "배드" ? "1" : "0.5";
+      minusBtn.style.fontWeight = window.noteEditorState.teamWork === "배드" ? "bold" : "normal";
+    }
+
+    updatePreview();
+  };
+
+  // 협동 삭제 함수 (Window 객체에 노출)
+  window.clearTeamWork = () => {
+    if (!window.noteEditorState) return;
+
+    window.noteEditorState.teamWork = "";
+
+    // UI 업데이트
+    const aceBtn = document.getElementById("ace-btn");
+    const minusBtn = document.getElementById("minus-btn");
+
+    if (aceBtn && minusBtn) {
+      aceBtn.style.opacity = "0.5";
+      aceBtn.style.fontWeight = "normal";
+      minusBtn.style.opacity = "0.5";
+      minusBtn.style.fontWeight = "normal";
+    }
+
+    updatePreview();
+  };
+
+  // 미리보기 업데이트 함수
+  function updatePreview() {
+    if (!window.noteEditorState) return;
+
+    const freeTextInput = document.getElementById("free-note");
+    if (freeTextInput) {
+      window.noteEditorState.freeText = freeTextInput.value;
+    }
+
+    const notePreviewEl = document.getElementById("note-preview");
+    if (notePreviewEl) {
+      const previewText = buildNoteString();
+      notePreviewEl.textContent = previewText || "(없음)";
+    }
+
+    const teamWorkPreviewEl = document.getElementById("teamwork-preview");
+    if (teamWorkPreviewEl) {
+      teamWorkPreviewEl.textContent = window.noteEditorState.teamWork || "(없음)";
+    }
+  }
+
+  // 노트 에디터 초기화 함수
+  function initializeNoteEditor(existingNote, existingTeamWork) {
+    const { categories, freeText } = parseExistingNote(existingNote);
+
+    window.noteEditorState = {
+      selectedCategories: [...categories],
+      freeText: freeText,
+      teamWork: existingTeamWork || ""
+    };
+
+    // 자유 입력 필드 이벤트 리스너
+    setTimeout(() => {
+      const freeTextInput = document.getElementById("free-note");
+      if (freeTextInput) {
+        freeTextInput.value = freeText;
+        freeTextInput.addEventListener("input", updatePreview);
+      }
+
+      // 선택된 카테고리 버튼 활성화
+      categories.forEach(cat => {
+        const btn = document.querySelector(`[data-category="${cat}"]`);
+        if (btn) {
+          btn.classList.add("category-btn-selected");
+        }
+      });
+
+      // 에이스/마이너스 버튼 초기 상태 설정
+      const aceBtn = document.getElementById("ace-btn");
+      const minusBtn = document.getElementById("minus-btn");
+      if (aceBtn && minusBtn) {
+        aceBtn.style.opacity = existingTeamWork === "굿" ? "1" : "0.5";
+        aceBtn.style.fontWeight = existingTeamWork === "굿" ? "bold" : "normal";
+        minusBtn.style.opacity = existingTeamWork === "배드" ? "1" : "0.5";
+        minusBtn.style.fontWeight = existingTeamWork === "배드" ? "bold" : "normal";
+      }
+
+      updatePreview();
+    }, 100);
+  }
+
+  // 비고 편집 메인 핸들러
+  const handleNoteEdit = async (stu, classIndex, studentIndex) => {
+    const hasNote = stu.note && stu.note.trim() !== "";
+    const hasTeamWork = stu.teamWork && stu.teamWork.trim() !== "";
+
+    const result = await Swal.fire({
+      title: `${stu.exClass}반 ${stu.name} - 비고 / 협동 수정`,
+      html: `
+        <div style="margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong>비고 선택:</strong>
+            ${hasNote ? `
+              <button
+                onclick="clearAllCategories()"
+                type="button"
+                style="padding: 6px 12px; border: 2px solid #d32f2f; border-radius: 6px; background: #f44336; color: white; cursor: pointer; font-size: 12px; font-weight: bold;"
+              >
+                🗑️ 비고 삭제
+              </button>
+            ` : ''}
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;">
+            ${NOTE_CATEGORIES.map(cat => `
+              <button
+                class="category-btn"
+                data-category="${cat}"
+                onclick="toggleCategory('${cat}')"
+                type="button"
+                style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 13px;"
+              >
+                ${cat}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong>협동:</strong>
+            ${hasTeamWork ? `
+              <button
+                onclick="clearTeamWork()"
+                type="button"
+                style="padding: 6px 12px; border: 2px solid #d32f2f; border-radius: 6px; background: #f44336; color: white; cursor: pointer; font-size: 12px; font-weight: bold;"
+              >
+                🗑️ 협동 삭제
+              </button>
+            ` : ''}
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 10px; justify-content: center;">
+            <button
+              id="ace-btn"
+              onclick="toggleTeamWork('굿')"
+              type="button"
+              style="padding: 10px 30px; border: 2px solid #5a9e0d; border-radius: 8px; background: #70be0d69; cursor: pointer; font-size: 14px; font-weight: bold; opacity: 0.5;"
+            >
+              ⭐ 에이스
+            </button>
+            <button
+              id="minus-btn"
+              onclick="toggleTeamWork('배드')"
+              type="button"
+              style="padding: 10px 30px; border: 2px solid #8b0000; border-radius: 8px; background: #8b000080; color: white; cursor: pointer; font-size: 14px; font-weight: bold; opacity: 0.5;"
+            >
+              ⚠️ 마이너스
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">추가 내용:</label>
+          <textarea
+            id="free-note"
+            placeholder="자유롭게 입력하세요"
+            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; min-height: 60px; box-sizing: border-box;"
+          ></textarea>
+        </div>
+
+        <div style="padding: 10px; background-color: #e7f3ff; border-radius: 5px;">
+          <div style="margin-bottom: 5px;"><strong>비고 -</strong> <span id="note-preview">${stu.note || "(없음)"}</span></div>
+          <div><strong>협동 -</strong> <span id="teamwork-preview">${stu.teamWork || "(없음)"}</span></div>
+        </div>
+      `,
+      width: "600px",
+      showCancelButton: true,
+      confirmButtonText: "저장",
+      cancelButtonText: "취소",
+      didOpen: () => {
+        initializeNoteEditor(stu.note || "", stu.teamWork || "");
+      },
+      preConfirm: () => {
+        return {
+          note: buildNoteString(),
+          teamWork: window.noteEditorState?.teamWork || ""
+        };
+      }
+    });
+
+    if (result.isConfirmed) {
+      // State 업데이트
+      const updatedClass = [...nextAdaptClass];
+      updatedClass[classIndex][studentIndex] = {
+        ...updatedClass[classIndex][studentIndex],
+        note: result.value.note,
+        teamWork: result.value.teamWork
+      };
+      setNextAdaptClass(updatedClass);
+
+      Swal.fire({
+        icon: "success",
+        title: "비고가 수정되었습니다",
+        html: `
+          <div>비고: ${result.value.note || "(삭제됨)"}</div>
+          <div>협동: ${result.value.teamWork || "(없음)"}</div>
+        `,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+    // 정리
+    delete window.noteEditorState;
+  };
+
   function truncateString(str, maxLength) {
     if (!noteSummary && str.length > maxLength) {
       return "🚩" + str.substring(0, maxLength) + "...";
@@ -2877,7 +3234,92 @@ function App() {
             <button className={classes["settingBtn"]} onClick={makeExcelFile}>
               4. 엑셀파일 저장
             </button>
+
+            <button
+              className={classes["settingBtn"]}
+              onClick={() => window.print()}
+              style={{ marginLeft: "10px" }}
+            >
+              🖨️ 인쇄
+            </button>
           </div>
+
+          {/* 현재학급 필터 버튼들 */}
+          <div style={{ marginTop: "15px", padding: "10px", backgroundColor: "#f9f9f9", borderRadius: "8px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "5px" }}>
+            <strong style={{ marginRight: "10px", fontSize: "14px" }}>현재학급 필터:</strong>
+            <button
+              className={classes["settingBtn"]}
+              onClick={orderByName}
+              style={{
+                padding: "8px 16px",
+                fontSize: "12px",
+                backgroundColor: "#e3f2fd"
+              }}
+            >
+              이름순 ↓
+            </button>
+            <button
+              className={classes["settingBtn"]}
+              onClick={orderByExClassNum}
+              style={{
+                padding: "8px 16px",
+                fontSize: "12px",
+                backgroundColor: "#e3f2fd",
+                marginRight: "10px"
+              }}
+            >
+              학급순 ↓
+            </button>
+            {(() => {
+              // nextAdaptClass에서 현재 학급 목록 추출
+              const allExClasses = nextAdaptClass.flat().map(stu => stu.exClass).filter(Boolean);
+              const uniqueExClasses = [...new Set(allExClasses)].sort((a, b) => {
+                // 숫자로 정렬
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                return numA - numB;
+              });
+
+              return uniqueExClasses.map((className) => (
+                <button
+                  key={className}
+                  className={classes["settingBtn"]}
+                  style={{
+                    padding: "10px",
+                    fontSize: "12px",
+                    backgroundColor: selectedExClasses.includes(className) ? "#ffd700" : "#fff",
+                    fontWeight: selectedExClasses.includes(className) ? "bold" : "normal"
+                  }}
+                  onClick={() => {
+                    setSelectedExClasses(prev => {
+                      if (prev.includes(className)) {
+                        // 이미 선택된 경우 해제
+                        return prev.filter(c => c !== className);
+                      } else {
+                        // 새로 선택
+                        return [...prev, className];
+                      }
+                    });
+                  }}
+                >
+                  {className}반
+                </button>
+              ));
+            })()}
+            <button
+              className={classes["settingBtn"]}
+              style={{
+                padding: "10px",
+                fontSize: "12px",
+                backgroundColor: selectedExClasses.length > 0 ? "#f44336" : "#999",
+                color: "white"
+              }}
+              onClick={() => setSelectedExClasses([])}
+            >
+              전체 해제
+            </button>
+          </div>
+
           {/* 설명보여주기 부분의 설명*/}
           {showExplain && (
             <div className={classes["explainDiv"]}>
@@ -3026,6 +3468,10 @@ function App() {
                         stu.teamWork === "배드" ? classes["badStudent"] : ""
                       } ${
                         stu.note === "특수반" ? classes["specialStudent"] : ""
+                      } ${
+                        selectedExClasses.includes(stu.exClass)
+                          ? (stu.gender === "남" ? classes["highlightedExClassMale"] : classes["highlightedExClassFemale"])
+                          : ""
                       }`}
                       // className={`${classes["newClass-li"]} ${
                       //   stu.teamWork === 1 ? classes["cl1"] : ""
@@ -3035,6 +3481,10 @@ function App() {
                       //   stu.teamWork === 5 ? classes["cl5"] : ""
                       // } ${stu.teamWork === 6 ? classes["cl6"] : ""}`}
                       key={stu.exClass + stu_index + stu.name}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        handleNoteEdit(stu, index, stu_index);
+                      }}
                       onClick={(e) => {
                         const currentT = e.currentTarget;
                         // 클릭된 학생이 없었으면 템프에 추가해두고 테두리 진하게!
@@ -3064,6 +3514,7 @@ function App() {
                           //바꾸는 이유 등록하기
                           Swal.fire({
                             title: "학생을 바꾸는 이유를 작성해주세요.",
+                            text: "(선택사항 - 빈칸 가능)",
                             input: "textarea",
                             inputAttributes: {
                               autocapitalize: "off",
@@ -3075,19 +3526,6 @@ function App() {
                             confirmButtonText: "저장",
                           }).then((result) => {
                             if (result.isConfirmed) {
-                              //빈칸은 저장불가
-                              if (result.value.trim() === "") {
-                                // 테두리 점선으로 파랗게
-                                currentT.style.border = "";
-                                Swal.fire({
-                                  icon: "error",
-                                  title: "저장불가",
-                                  text: "빈 내용을 저장할 수 없어요. 내용을 확인해주세요!",
-                                });
-
-                                return;
-                              }
-
                               const stu_data = {
                                 change_or_put: "change",
                                 student1_name: tempStudent.name,
@@ -3100,7 +3538,7 @@ function App() {
                                 student2_classFromIndex: index,
                                 student2_classToIndex:
                                   tempStudent.next_cl_index,
-                                change_reason: result.value,
+                                change_reason: result.value || "",
                               };
                               // console.log(stu_data);
                               setReason((prev) => [...prev, { ...stu_data }]);
@@ -3133,16 +3571,28 @@ function App() {
                         }
                       }}
                     >
-                      <span className={classes["newClassSpan-name"]}>
+                      <span
+                        className={classes["newClassSpan-name"]}
+                        title="좌클릭: 학급변경 / 우클릭: 비고수정"
+                      >
                         {stu.name}
                       </span>
-                      <span className={classes["newClassSpan-exClass"]}>
+                      <span
+                        className={classes["newClassSpan-exClass"]}
+                        title="좌클릭: 학급변경 / 우클릭: 비고수정"
+                      >
                         {orderOriginClass ? stu?.nextClass : stu.exClass}
                       </span>
-                      <span className={classes["newClassSpan-gender"]}>
+                      <span
+                        className={classes["newClassSpan-gender"]}
+                        title="좌클릭: 학급변경 / 우클릭: 비고수정"
+                      >
                         {stu.gender}
                       </span>
-                      <span className={classes["newClassSpan-score"]}>
+                      <span
+                        className={classes["newClassSpan-score"]}
+                        title="좌클릭: 학급변경 / 우클릭: 비고수정"
+                      >
                         {stu.score}
                       </span>
                       <span

@@ -10,7 +10,8 @@
       "Bash(git checkout:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nMerge with remote and add auto-distribution feature\n\n- 자동배분 기능 추가\n- 초기화 버튼 오른쪽에 자동배분 버튼 배치\n- 1차: 생활지도/학습부진/다문화/학부모 학생 균등 분산\n- 2차: 비고의 그룹(그룹1, 그룹2 등) 학생 균등 배치\n- 3차: 굿/배드 학생 균등 배치 (비고 없는 학생 기준)\n- 무한루프 방지 및 예외 처리 강화\n- 설명에 자동배분 기능 안내 추가\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit -m \"$(cat <<''EOF''\n생활지도/학부모 레벨 구분 기능 추가\n\n- 생활지도: 생활지도, 생활지도-상, 생활지도-중, 생활지도-하 인식\n- 학부모: 학부모, 학부모-상, 학부모-중, 학부모-하 인식\n- 레벨 없이 입력된 경우 자동으로 \"중\"으로 처리\n- 자동배분 시 레벨 가중치를 고려하여 균등 배치 (상:3, 중:2, 하:1)\n- 학부모 카운트 표시 추가\n- 카운트는 레벨 상관없이 해당 항목 포함 시 모두 카운트\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
