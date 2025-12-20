@@ -3694,13 +3694,15 @@ function App() {
                   style={{ fontSize: "20px" }}
                 >
                   남 {cl.filter((stu) => stu.gender === "남").length} / 여{" "}
-                  {cl.filter((stu) => stu.gender === "여").length} <br /> 총{" "}
-                  {cl.length}명 <br />
+                  {cl.filter((stu) => stu.gender === "여").length} <br />
+                  총 {cl.length}명 <br />
                   <hr />
-                  <span style={{ fontSize: "10px" }}>전출제외</span>{" "}
-                  {cl.length -
-                    cl.filter((stu) => stu.note.includes("전출")).length}{" "}
-                  명
+                  <div style={{ fontSize: "14px", marginTop: "5px" }}>
+                    <div style={{ fontSize: "10px", color: "#666" }}>전출제외</div>
+                    남 {cl.filter((stu) => stu.gender === "남" && !stu.note.includes("전출")).length} / 여{" "}
+                    {cl.filter((stu) => stu.gender === "여" && !stu.note.includes("전출")).length}<br />
+                    총 {cl.length - cl.filter((stu) => stu.note.includes("전출")).length}명
+                  </div>
                 </div>
                 <div
                   className={classes["specialStudent"]}
