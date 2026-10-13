@@ -26,24 +26,61 @@ const CLASS_NAME = [
   ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"],
 ];
 
+// 설명보기에 나오는 색 안내
+const EXPLAIN_LEGEND = [
+  { label: "협동 굿", className: "goodStudent" },
+  { label: "협동 배드", className: "badStudent" },
+  { label: "특수반", className: "specialStudent" },
+  { label: "선택한 현재학급 (남)", className: "highlightedExClassMale" },
+  { label: "선택한 현재학급 (여)", className: "highlightedExClassFemale" },
+];
+
 const EXPLAINS = [
-  "* 브라우저 확대/축소 (Ctrl+마우스휠) 로 한 눈에 보이도록 설정한 후 사용하세요.",
-  "* 이름 / 이전반 / 성별 / 점수 / 비고 순서로 보여집니다.",
-  "* 초기화 버튼을 누르면 처음 반배정되었던 상태로 되돌아갑니다.",
-  "* 1. AI편성 버튼: 특정 학생들만 선별하여 재배치합니다 (사용자 입력 학생 + 비고 있는 학생 + 배드 학생 균등 배치). AI 편성 후 '2. 자동배분' 버튼으로 전체 균형을 최적화하세요!",
-  "* 2. 자동배분 버튼: 1차-생활지도/학습부진/다문화/학부모, 2차-에이스(굿), 3차-그룹, 4차-배드, 5차-전체 인원수(특수반 +1 가중치) 및 성비 균형을 자동으로 맞춥니다.",
-  "* 사이트를 새로고침 하실 경우 작업 중이던 자료가 사라집니다.",
-  "* 3. 중복이름확인 버튼을 누르면 현재 상태에서 이름(성 제외)이 같은학생이 있는지 확인해서 빨간색으로 표시/제거합니다.",
-  "* 내년학급기준/현재학급기준 버튼을 누르면 해당 기준으로 학생들이 정렬됩니다.",
-  "* 남자 앞번호 / 여자 앞번호 / 혼성번호 버튼을 누르면 현재 상태에서 성별을 기준으로 정렬됩니다.",
-  "* 두 학생을 차례로 클릭하면 테두리가 표시 되고, 이유를 입력하면 학급이 교체됩니다.",
-  "* 학생을 클릭한 후 빈자리에 넣기를 누르면 해당 학급으로 이동됩니다.",
-  "* 비고가 '전출'인 학생은 정렬에 상관없이 가장 뒤로 배치됩니다.",
-  "* 비고의 내용이 길어서 보기가 불편한 경우(🚩표시), '비고 펼치기 | 줄이기' 버튼을 활용해주세요.",
-  "* 엑셀파일로 저장하시면, 나이스 업로드용 / 교사용 명렬표 두 가지 엑셀파일이 저장됩니다.",
-  "* 다음에 분반을 이어하실 경우 저장된 엑셀 파일 중 교사용 명렬표 파일을 업로드 해주세요.",
-  "* 다른 자료로 배정하시려면 사이트를 새로고침(F5) 해주세요.",
-  "* 학생들의 정보와 관련된 책임은 사용자에게 있습니다.",
+  {
+    title: "👀 화면 보는 법",
+    items: [
+      "학생 한 줄은 이름 / 현재반 / 성별 / 점수 / 비고 순서입니다.",
+      "브라우저 확대/축소(Ctrl + 마우스휠)로 한눈에 보이게 맞춰두세요.",
+      "비고가 길면 🚩로 줄여서 보여줍니다. '비고 펼치기 / 줄이기' 버튼으로 바꿀 수 있어요.",
+      "'현재학급 표시'에서 반을 누르면 그 반 학생들이 노란색으로 표시됩니다.",
+    ],
+  },
+  {
+    title: "🚀 추천 순서 (버튼 1 → 4)",
+    items: [
+      "1. AI편성: 굿/배드 학생을 반마다 고르게 나누고, 입력한 조건(같은 반 / 다른 반 등)에 맞춰 조건에 적은 학생과 비고가 있는 학생을 다시 배치합니다. 하루 10회까지 쓸 수 있어요.",
+      "2. 자동배분: 생활지도·학습부진·다문화·학부모 → 그룹 → 인원수(특수반은 +1명으로 계산)·성비 순서로 균형을 맞춥니다. 굿/배드 학생은 옮기지 않습니다.",
+      "3. 중복이름확인: 한 반에 이름(성 제외)이 같은 학생을 빨간색으로 표시합니다. 다시 누르면 해제돼요.",
+      "4. 엑셀파일 저장: 나이스용 / 명렬표 / 기존학급기준 3개 파일이 저장됩니다.",
+    ],
+  },
+  {
+    title: "✋ 직접 옮기고 고치기",
+    items: [
+      "두 학생을 차례로 클릭하고 이유를 입력하면 서로 반이 바뀝니다.",
+      "학생을 클릭한 뒤 다른 반의 '빈자리에 넣기'를 누르면 그 반으로 옮겨집니다.",
+      "학생을 마우스 오른쪽 버튼으로 클릭하면 비고 / 협동을 수정할 수 있습니다.",
+      "'초기화'를 누르면 처음 반배정된 상태로 돌아갑니다. (바꾼 내용은 사라져요)",
+    ],
+  },
+  {
+    title: "🔀 정렬과 보기",
+    items: [
+      "'현재학급 기준 / 내년학급 기준'으로 올해 반별, 내년 반별 명단을 바꿔 볼 수 있습니다.",
+      "'남자 앞번호 / 여자 앞번호 / 혼성번호'를 누르면 그 기준의 이름순으로 번호가 정해집니다.",
+      "이때 비고에 '전출'이 있는 학생은 항상 맨 뒤로 갑니다.",
+      "'이름순 / 학급순'은 반 안에서 보이는 순서만 바꿉니다.",
+    ],
+  },
+  {
+    title: "💾 저장과 주의사항",
+    items: [
+      "사이트를 새로고침(F5)하면 작업 중이던 자료가 사라집니다. 중간중간 엑셀파일로 저장해두세요.",
+      "다음에 이어서 하려면 저장된 파일 중 '명렬표' 파일을 첫 화면의 '분반 이어하기'에 올리세요. (파일 이름은 바꾸지 마세요)",
+      "다른 자료로 새로 시작하려면 사이트를 새로고침하세요.",
+      "학생 정보와 관련된 책임은 사용자에게 있습니다.",
+    ],
+  },
 ];
 
 const AI_CLASS_EXAMPLES = [
@@ -271,9 +308,9 @@ function App() {
         },
         { role: "user", content: text },
       ],
-      model: "gpt-4o-mini",
-      // model: "gpt-4o",
-      temperature: 0.7,
+      model: "gpt-6-luna",
+      // 추론 모델: 추론을 켜면(none 이외) temperature, top_p는 보낼 수 없음
+      reasoning_effort: "medium",
       response_format: { type: "json_object" },
     });
     return completion?.choices[0]?.message?.content;
@@ -1812,9 +1849,10 @@ function App() {
         </p>
         <p style="color: #999; font-size: 12px; margin-top: 10px;">
           1차: 생활지도/학습부진/다문화/학부모 분산 ${step >= 1 ? "✅" : ""}<br>
-          2차: 그룹 균등 배치 ${step >= 2 ? "✅" : ""}<br>
-          3차: 굿/배드 균등 배치 ${step >= 3 ? "✅" : ""}<br>
-          4차: AI 성비 균형 조정 ${step >= 4 ? "✅" : ""}
+          2차: 굿 학생 유지 ${step >= 2 ? "✅" : ""}<br>
+          3차: 그룹 균등 배치 ${step >= 3 ? "✅" : ""}<br>
+          4차: 배드 학생 유지 ${step >= 4 ? "✅" : ""}<br>
+          5차: 인원수 / 성비 균형 조정 ${step >= 5 ? "✅" : ""}
         </p>
       `;
     }
@@ -3246,7 +3284,7 @@ function App() {
 
           {/* 현재학급 필터 버튼들 */}
           <div style={{ marginTop: "15px", padding: "10px", backgroundColor: "#f9f9f9", borderRadius: "8px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "5px" }}>
-            <strong style={{ marginRight: "10px", fontSize: "14px" }}>현재학급 필터:</strong>
+            <strong style={{ marginRight: "10px", fontSize: "14px" }}>정렬:</strong>
             <button
               className={classes["settingBtn"]}
               onClick={orderByName}
@@ -3270,6 +3308,7 @@ function App() {
             >
               학급순 ↓
             </button>
+            <strong style={{ marginRight: "10px", fontSize: "14px" }}>현재학급 표시:</strong>
             {(() => {
               // nextAdaptClass에서 현재 학급 목록 추출
               const allExClasses = nextAdaptClass.flat().map(stu => stu.exClass).filter(Boolean);
@@ -3322,11 +3361,29 @@ function App() {
 
           {/* 설명보여주기 부분의 설명*/}
           {showExplain && (
-            <div className={classes["explainDiv"]}>
-              {EXPLAINS.map((expl, index) => (
-                <p key={"expl" + index} className={classes["explainSpan"]}>
-                  {expl}
-                </p>
+            <div className={classes["helpPanel"]}>
+              <div className={classes["helpLegend"]}>
+                <strong>색 안내</strong>
+                {EXPLAIN_LEGEND.map((legend) => (
+                  <span key={legend.label} className={classes["helpLegendItem"]}>
+                    <i
+                      className={`${classes["helpSwatch"]} ${
+                        classes[legend.className]
+                      }`}
+                    />
+                    {legend.label}
+                  </span>
+                ))}
+              </div>
+              {EXPLAINS.map((section) => (
+                <div key={section.title} className={classes["helpCard"]}>
+                  <h3>{section.title}</h3>
+                  <ul>
+                    {section.items.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
               ))}
             </div>
           )}
@@ -3467,7 +3524,7 @@ function App() {
                       } ${
                         stu.teamWork === "배드" ? classes["badStudent"] : ""
                       } ${
-                        stu.note === "특수반" ? classes["specialStudent"] : ""
+                        stu.note?.includes("특수반") ? classes["specialStudent"] : ""
                       } ${
                         selectedExClasses.includes(stu.exClass)
                           ? (stu.gender === "남" ? classes["highlightedExClassMale"] : classes["highlightedExClassFemale"])

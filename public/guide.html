@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>분반해요 · 입력양식 설명서</title>
+<style>
+  :root {
+    --navy: #1f4e78; --green: #548235; --purple: #a852cb; --red: #c00000;
+    --bg: #f3f6fa; --card: #ffffff; --ink: #1d2733; --muted: #5d6b7a; --line: #d9e1ea;
+    --cream: #fff9e5; --pink: #fde9e7;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Pretendard", "맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg); color: var(--ink); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 12px 24px;
+    background: var(--navy); color: #fff;
+  }
+  header .brand { font-weight: 800; font-size: 18px; white-space: nowrap; }
+  header nav { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  header nav button {
+    border: 0; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px;
+    background: rgba(255,255,255,.14); color: #fff; cursor: pointer;
+  }
+  header nav button.on { background: #fff; color: var(--navy); font-weight: 700; }
+  .bar { height: 5px; background: #c9d6e4; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--purple); transition: width .35s; }
+
+  main { flex: 1; position: relative; overflow: hidden; }
+  .slide {
+    position: absolute; inset: 0; padding: 28px 6vw 20px; overflow-y: auto;
+    opacity: 0; transform: translateX(40px); pointer-events: none;
+    transition: opacity .35s, transform .35s;
+  }
+  .slide.on { opacity: 1; transform: none; pointer-events: auto; }
+  .slide.left { transform: translateX(-40px); }
+  .inner { max-width: 1080px; margin: 0 auto; }
+  .tag { display: inline-block; background: var(--navy); color: #fff; border-radius: 8px; padding: 4px 12px; font-size: 14px; font-weight: 700; }
+  h1 { font-size: clamp(30px, 5vw, 54px); margin: 14px 0 10px; color: var(--navy); letter-spacing: -1px; }
+  h2 { font-size: clamp(24px, 3.2vw, 36px); margin: 12px 0 18px; color: var(--navy); letter-spacing: -.5px; }
+  p.lead { font-size: clamp(16px, 1.8vw, 21px); color: var(--muted); line-height: 1.7; margin: 0 0 18px; }
+
+  .cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  ol.steps li {
+    display: flex; gap: 14px; align-items: flex-start; background: var(--card);
+    border: 1px solid var(--line); border-radius: 14px; padding: 13px 16px;
+    font-size: clamp(15px, 1.5vw, 18px); line-height: 1.55;
+  }
+  ol.steps li b.n {
+    flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--navy);
+    color: #fff; display: grid; place-items: center; font-size: 15px;
+  }
+  ol.steps li em { font-style: normal; font-weight: 700; color: var(--navy); background: #e6eef7; padding: 1px 6px; border-radius: 5px; }
+  ul.tips { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  ul.tips li {
+    background: var(--card); border: 1px solid var(--line); border-left: 6px solid var(--green);
+    border-radius: 10px; padding: 12px 16px; font-size: clamp(15px, 1.5vw, 18px); line-height: 1.55;
+  }
+  ul.tips li.no { border-left-color: var(--red); }
+  kbd { background: #1d2733; color: #fff; border-radius: 5px; padding: 1px 7px; font: inherit; font-size: .9em; }
+  .warn {
+    background: var(--pink); color: var(--red); font-weight: 700; border-radius: 12px;
+    padding: 14px 18px; margin-top: 14px; font-size: clamp(15px, 1.5vw, 18px); line-height: 1.6;
+  }
+  .note { color: #7f6000; background: #fff2cc; border-radius: 12px; padding: 12px 16px; margin-top: 14px; font-size: 16px; line-height: 1.6; }
+
+  /* 흐름 카드 */
+  .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 860px) { .flow { grid-template-columns: 1fr; } }
+  .flow div {
+    background: var(--card); border: 1px solid var(--line); border-top: 6px solid var(--navy);
+    border-radius: 14px; padding: 16px 14px; font-size: 16px; line-height: 1.55; position: relative;
+  }
+  .flow div b { display: block; font-size: 30px; color: var(--purple); margin-bottom: 6px; }
+  .flow div strong { display: block; font-size: 18px; color: var(--navy); margin-bottom: 4px; }
+
+  /* 화면 흉내 */
+  .mock { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(31,78,120,.12); overflow: hidden; font-size: 14px; }
+  .mock .top { background: #eef2f6; padding: 8px 12px; color: var(--muted); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .mock .top span.badge { background: #188038; color: #fff; border-radius: 4px; padding: 0 6px; font-size: 11px; font-weight: 700; }
+  .mock .top span.share { margin-left: auto; background: #c2e7ff; color: #001d35; border-radius: 999px; padding: 4px 14px; font-weight: 700; }
+  .mock .body { padding: 16px; }
+  .field { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .field .hl { background: #fff3a8; border-radius: 6px; padding: 2px 8px; font-weight: 700; }
+  .field small { color: var(--muted); display: block; }
+  .btn { display: inline-block; border: 1px solid #1a73e8; color: #1a73e8; border-radius: 999px; padding: 6px 16px; font-weight: 700; margin-top: 12px; }
+  .menu { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
+  .menu span { background: #eef2f6; border-radius: 8px; padding: 6px 12px; }
+  .menu span.hl { background: #fff3a8; font-weight: 700; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 12px; background: #eef2f6; }
+  .tabs span { background: #fff; border: 1px solid var(--line); border-radius: 6px 6px 0 0; padding: 5px 12px; font-size: 13px; }
+  .tabs span.r { border-bottom: 3px solid var(--red); } .tabs span.y { border-bottom: 3px solid #bf8f00; }
+  .tabs span.b { border-bottom: 3px solid var(--navy); } .tabs span.me { background: #fff3a8; font-weight: 700; }
+
+  table.sheet { border-collapse: collapse; width: 100%; font-size: 14px; background: #fff; }
+  table.sheet th, table.sheet td { border: 1px solid #bfbfbf; padding: 6px 8px; text-align: center; white-space: nowrap; }
+  table.sheet th { color: #fff; background: var(--green); }
+  table.sheet th.req { background: var(--navy); }
+  table.sheet td.in { background: var(--cream); }
+  table.sheet td.bad { background: #ffc7ce; }
+  table.sheet td.gray { color: #9aa5b1; }
+  .scroll { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+
+  .chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .chip { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; font-size: 15px; line-height: 1.55; }
+  .chip h3 { margin: 0 0 6px; font-size: 18px; color: var(--green); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .chip h3 span { font-size: 12px; background: #e9f2e2; color: var(--green); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .chip.req h3 { color: var(--navy); } .chip.req h3 span { background: #e6eef7; color: var(--navy); }
+
+  .qa { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 860px) { .qa { grid-template-columns: 1fr; } }
+  .qa div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; font-size: 15px; line-height: 1.6; }
+  .qa div b { display: block; color: var(--navy); font-size: 17px; margin-bottom: 4px; }
+
+  footer { display: flex; align-items: center; gap: 12px; padding: 10px 24px; background: #fff; border-top: 1px solid var(--line); }
+  footer button {
+    border: 0; border-radius: 12px; padding: 11px 22px; font: inherit; font-size: 16px; font-weight: 700;
+    background: var(--navy); color: #fff; cursor: pointer;
+  }
+  footer button.ghost { background: #e6eef7; color: var(--navy); }
+  footer button:disabled { opacity: .35; cursor: default; }
+  footer .count { margin: 0 auto; color: var(--muted); font-size: 15px; }
+  footer .hint { color: var(--muted); font-size: 13px; }
+  @media (max-width: 860px) { footer .hint, header .brand { display: none; } }
+  a.big { display: inline-block; background: var(--purple); color: #fff; text-decoration: none; border-radius: 14px; padding: 14px 26px; font-size: 19px; font-weight: 800; margin: 6px 10px 0 0; }
+  a.big.alt { background: var(--navy); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">분반해요 😄 설명서</div>
+  <nav id="nav"></nav>
+</header>
+<div class="bar"><i id="bar"></i></div>
+
+<main id="deck">
+  <section class="slide" data-nav="시작">
+    <div class="inner">
+      <span class="tag">학급편성 입력양식 설명서</span>
+      <h1>엑셀 양식에 입력하고<br />사이트에 올리면 끝!</h1>
+      <p class="lead">올해 학생 자료를 엑셀 양식에 입력해 업로드하면 내년 반을 나눌 수 있습니다.<br />
+        아래 <b>다음 ▶</b> 버튼이나 키보드 <kbd>→</kbd> 키로 한 장씩 넘겨보세요.</p>
+      <a class="big" href="class_template.xlsx" download="학급편성 입력양식.xlsx">📥 양식파일 다운</a>
+      <a class="big alt" href="./">🏠 분반 사이트로</a>
+      <div class="note">양식 파일 안의 <b>'설명서'</b> 시트에도 같은 내용이 글로 들어 있습니다.</div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="1. 순서">
+    <div class="inner">
+      <span class="tag">1. 한눈에 보는 순서</span>
+      <h2>다섯 단계면 됩니다</h2>
+      <div class="flow">
+        <div><b>①</b><strong>예시 확인</strong>'작성예시' 시트를 보고 입력 방법을 확인합니다.</div>
+        <div><b>②</b><strong>반별 입력</strong>'1반', '2반' … 시트에 올해 반별로 입력합니다.<br />(한 시트 = 올해 한 반)</div>
+        <div><b>③</b><strong>함께 입력</strong>여러 선생님이 입력하려면 구글 드라이브로 공유합니다.</div>
+        <div><b>④</b><strong>업로드</strong>완성된 엑셀파일(.xlsx)을 사이트의 '엑셀파일 업로드'에 올립니다.</div>
+        <div><b>⑤</b><strong>고치기</strong>문제가 있으면 사이트가 '어느 시트 몇 행'인지 알려줍니다. 고친 뒤 다시 올립니다.</div>
+      </div>
+      <div class="mock" style="margin-top:18px">
+        <div class="tabs"><span class="r">설명서</span><span class="y">작성예시</span><span class="b me">1반</span><span class="b">2반</span><span class="b">3반</span><span class="b">4반</span><span class="b">…</span><span class="b">10반</span></div>
+      </div>
+      <div class="note">엑셀 아래쪽 탭이 이렇게 되어 있습니다. 빨강 = 설명서, 노랑 = 예시, 파랑 = 실제로 입력하는 반 시트.</div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="2. 공유하기">
+    <div class="inner">
+      <span class="tag">2. 구글 드라이브로 함께 입력하기 (1/2)</span>
+      <h2>대표 선생님: 올리고 공유하기</h2>
+      <div class="cols">
+        <ol class="steps">
+          <li><b class="n">1</b><span>구글 드라이브(drive.google.com)에서 <em>새로 만들기 &gt; 파일 업로드</em>로 엑셀 양식을 올립니다.</span></li>
+          <li><b class="n">2</b><span>올린 파일을 <em>더블클릭</em>해 엽니다. 파일 이름 옆에 <em>.XLSX</em> 표시가 보입니다.</span></li>
+          <li><b class="n">3</b><span>오른쪽 위 <em>공유</em> &gt; '일반 액세스'를 '제한됨' → <em>링크가 있는 모든 사용자</em>로 바꿉니다.</span></li>
+          <li><b class="n">4</b><span>바로 오른쪽 역할을 '뷰어' → <em>편집자</em>로 바꿉니다.<br />★ '뷰어'로 두면 다른 선생님이 입력할 수 없습니다.</span></li>
+          <li><b class="n">5</b><span><em>링크 복사</em>를 눌러 학년 선생님들께만 전달합니다.</span></li>
+        </ol>
+        <div class="mock">
+          <div class="top">학급편성 입력양식 <span class="badge">.XLSX</span><span class="share">🔒 공유</span></div>
+          <div class="body">
+            <b style="font-size:17px">'학급편성 입력양식' 공유</b>
+            <div style="margin-top:14px;color:var(--muted)">일반 액세스</div>
+            <div class="field">
+              <div><span class="hl">링크가 있는 모든 사용자 ▾</span><small>링크가 있는 인터넷상의 모든 사용자가 수정할 수 있습니다.</small></div>
+              <span class="hl">편집자 ▾</span>
+            </div>
+            <span class="btn">🔗 링크 복사</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="2. 입력·내려받기">
+    <div class="inner">
+      <span class="tag">2. 구글 드라이브로 함께 입력하기 (2/2)</span>
+      <h2>담임 선생님: 입력하기 → 대표 선생님: 내려받기</h2>
+      <ol class="steps">
+        <li><b class="n">6</b><span>각 담임 선생님은 링크를 열어 아래쪽 탭에서 <em>자기 반 시트만</em> 입력합니다. 동시에 입력해도 됩니다.</span></li>
+        <li><b class="n">7</b><span>모두 입력하면 대표 선생님이 내려받아 사이트에 업로드합니다.
+          <div class="menu" style="margin-top:8px"><span>파일</span>›<span>다운로드</span>›<span class="hl">Microsoft Excel(.xlsx)</span></div></span></li>
+        <li><b class="n">8</b><span>작업이 끝나면 공유를 다시 <em>제한됨</em>으로 바꾸고, 드라이브의 파일을 <em>삭제</em>합니다. (학생 개인정보 보호)</span></li>
+      </ol>
+      <div class="warn">★ 링크를 아는 사람은 누구나 열고 고칠 수 있습니다. 링크를 공개된 곳(단체방, 게시판 등)에 올리지 말고, 입력 기간에만 공유를 켜두세요. 학교/교육청의 개인정보 지침도 확인해주세요.</div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="3. 주의할 점">
+    <div class="inner">
+      <span class="tag">3. 구글 시트에서 입력할 때 주의할 점</span>
+      <h2>이것만 지키면 오류가 없습니다</h2>
+      <ul class="tips">
+        <li>나이스 등 다른 곳에서 복사해 붙여넣을 때는 <b>값만 붙여넣기</b> <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> 를 사용하세요. 그냥 붙여넣으면 드롭다운과 서식이 지워질 수 있습니다. (지워져도 글자만 맞으면 업로드는 됩니다)</li>
+        <li>드롭다운 칸은 화살표(▼)로 고르거나 같은 글자를 직접 입력해도 됩니다. <b>남/여 · 상/중/하 · O · 그룹1 · 굿/배드</b></li>
+        <li>필수 칸(반, 번호, 성별)이 비었거나 번호가 겹치면 그 칸이 <b style="background:#ffc7ce;padding:0 6px;border-radius:4px">빨간색</b>으로 표시됩니다.</li>
+        <li>줄을 통째로 삽입/삭제하거나 열 순서를 바꾸는 것은 괜찮습니다.</li>
+        <li class="no"><b>1행(머리글)</b>은 고치거나 지우지 마세요.</li>
+        <li class="no">셀 병합, 머리글 위에 제목 줄 추가, 그림 삽입은 하지 마세요.</li>
+        <li class="no">내려받을 때 PDF, CSV 말고 꼭 <b>Microsoft Excel(.xlsx)</b>을 선택하세요.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="4. 반 시트">
+    <div class="inner">
+      <span class="tag">4. 반 시트 다루기</span>
+      <h2>남는 시트, 남는 줄은 그대로 두세요</h2>
+      <div class="scroll">
+        <table class="sheet">
+          <tr><th class="req">반</th><th class="req">번호</th><th class="req">이름</th><th class="req">성별</th><th>생년월일</th><th>총점</th><th>…</th></tr>
+          <tr><td class="in">1</td><td class="in">1</td><td class="in">강민서</td><td class="in">여</td><td>2015.03.07</td><td>372</td><td></td></tr>
+          <tr><td class="in">1</td><td class="in">2</td><td class="in">김도윤</td><td class="in">남</td><td>2015.11.21</td><td>318</td><td></td></tr>
+          <tr><td class="in gray">1</td><td class="in"></td><td class="in"></td><td class="in"></td><td></td><td></td><td class="gray" style="text-align:left">← 이름이 없는 줄은 읽지 않습니다 ('반' 숫자만 남아 있어도 OK)</td></tr>
+          <tr><td class="in gray">1</td><td class="in"></td><td class="in"></td><td class="in"></td><td></td><td></td><td></td></tr>
+        </table>
+      </div>
+      <ul class="tips" style="margin-top:16px">
+        <li>시트는 1반 ~ 10반까지 준비되어 있습니다. <b>사용하지 않는 반 시트는 그대로 두거나 삭제</b>하면 됩니다. (빈 시트는 읽지 않습니다)</li>
+        <li>반이 더 필요하면 반 시트 탭을 오른쪽 클릭 &gt; <b>복사(사본 만들기)</b> 후, <b>시트 이름과 '반' 열의 숫자</b>를 새 반으로 바꿔주세요.</li>
+        <li>학생이 40명보다 많으면 아래 줄에 이어서 입력하면 됩니다.</li>
+        <li>'설명서', '작성예시' 시트는 사이트가 읽지 않으므로 지우지 않아도 됩니다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="5. 필수 열">
+    <div class="inner">
+      <span class="tag">5. 열별 입력 방법 (1/2)</span>
+      <h2>기본 정보 — 파란색 머리글 4개는 필수</h2>
+      <div class="chips">
+        <div class="chip req"><h3>반 <span>필수 · 숫자</span></h3>올해 반. 미리 입력되어 있습니다.</div>
+        <div class="chip req"><h3>번호 <span>필수 · 숫자</span></h3>올해 번호. 한 반 안에서 겹치면 안 됩니다.</div>
+        <div class="chip req"><h3>이름 <span>필수</span></h3>이름이 없는 줄은 읽지 않습니다.</div>
+        <div class="chip req"><h3>성별 <span>필수 · 남 / 여</span></h3>★ 비어 있으면 업로드가 되지 않습니다. (남자/여자로 적어도 인식)</div>
+        <div class="chip"><h3>생년월일 <span>2015.03.07</span></h3>나이스에서 내려받은 그대로 붙여넣으면 됩니다. 15.3.7, 20150307, 2015-03-07 등도 자동으로 2015.03.07 로 바뀝니다.</div>
+        <div class="chip"><h3>총점 <span>숫자</span></h3>점수 높은 순서로 반을 나눕니다. 비워두면 0점으로 처리됩니다.</div>
+      </div>
+      <div class="note">이름 · 성별 · 생년월일은 나이스 자료에서 <b>복사해서 붙여넣어도 됩니다.</b> 머리글(1행)에 마우스를 올리면 열마다 설명(메모)이 보입니다.</div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="5. 선택 열">
+    <div class="inner">
+      <span class="tag">5. 열별 입력 방법 (2/2)</span>
+      <h2>특이사항 — 해당하는 학생만 드롭다운으로 선택</h2>
+      <div class="chips">
+        <div class="chip"><h3>생활지도 <span>상 / 중 / 하</span></h3>상 = 가장 어려움. 각 반에 고르게 나눕니다.</div>
+        <div class="chip"><h3>학부모 <span>상 / 중 / 하</span></h3>민원 등 배려가 필요한 경우. 각 반에 고르게 나눕니다.</div>
+        <div class="chip"><h3>학습부진 · 다문화 <span>O</span></h3>해당 학생만 O. 각 반에 고르게 나눕니다.</div>
+        <div class="chip"><h3>특수반 <span>O</span></h3>인원수 계산 시 1명을 더한 것으로 봅니다.</div>
+        <div class="chip"><h3>쌍둥이 <span>O</span></h3>표시용입니다. 비고에 상대 학생(예: 2반 이서윤)을 적어두면 좋습니다. 같은 반/다른 반은 화면에서 직접 조정합니다.</div>
+        <div class="chip"><h3>전출 <span>O</span></h3>명단 맨 뒤로 가고 인원수에서 제외됩니다.</div>
+        <div class="chip"><h3>그룹 <span>그룹1 ~ 그룹8</span></h3>서로 <b>다른 반으로 떨어뜨릴</b> 학생들에게 같은 그룹을 선택. 예) 사이가 나쁜 3명 → 모두 그룹1</div>
+        <div class="chip"><h3>협동 <span>굿 / 배드</span></h3>굿 = 분위기를 이끄는 학생, 배드 = 협동이 어려운 학생. '1. AI편성'을 누르면 각 반에 고르게 나눕니다.</div>
+        <div class="chip"><h3>비고 <span>자유 입력</span></h3>그 밖에 적어둘 내용. 쉼표로 여러 내용을 적을 수 있습니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="6. 문제 해결">
+    <div class="inner">
+      <span class="tag">6. 자주 생기는 문제와 해결</span>
+      <h2>이럴 땐 이렇게</h2>
+      <div class="qa">
+        <div><b>Q. 학생이 한 명도 안 보여요 / 업로드가 안 돼요</b>대부분 '성별'이 비어 있는 경우입니다. 사이트가 알려주는 시트/행을 고친 뒤 다시 업로드하세요.</div>
+        <div><b>Q. '성별' 열(머리글)을 찾지 못했다고 나와요</b>1행 머리글이 지워졌거나 바뀐 경우입니다. 다른 반 시트의 1행을 복사해 붙여넣으세요.</div>
+        <div><b>Q. '○반 ○번이 겹칩니다'라고 나와요</b>같은 반에 같은 번호가 두 번 있거나, 시트를 복사한 뒤 '반' 열 숫자를 바꾸지 않은 경우입니다.</div>
+        <div><b>Q. 생년월일이 이상한 숫자(예: 42070)로 보여요</b>날짜 서식으로 바뀐 것입니다. 그대로 업로드해도 자동으로 '2015.03.07' 형태로 바로잡습니다.</div>
+        <div><b>Q. 드롭다운(▼)이 사라졌어요</b>붙여넣기로 덮어쓴 경우입니다. 글자만 정확하면 그대로 업로드해도 됩니다.</div>
+        <div><b>Q. 엑셀파일을 열 수 없다고 나와요</b>암호가 걸렸거나 .xlsx 형식이 아닌 경우입니다. 구글 시트에서 'Microsoft Excel(.xlsx)'로 다시 내려받으세요.</div>
+        <div style="grid-column:1/-1"><b>Q. 사이트를 새로고침했더니 작업이 사라졌어요</b>사이트는 자료를 저장하지 않습니다. 작업 중간에 '4. 엑셀파일 저장'을 눌러두고, 다음에는 저장된 '명렬표' 파일을 '분반 이어하기'에 올리세요.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-nav="끝">
+    <div class="inner">
+      <span class="tag">준비 끝!</span>
+      <h1>이제 입력하고<br />업로드해 보세요 🫡</h1>
+      <p class="lead">입력이 끝난 엑셀파일을 사이트의 <b>'엑셀파일 업로드'</b>에 올리면 됩니다.<br />문제가 있으면 사이트가 고칠 곳을 알려줍니다.</p>
+      <a class="big" href="class_template.xlsx" download="학급편성 입력양식.xlsx">📥 양식파일 다운</a>
+      <a class="big alt" href="./">🏠 분반 사이트로</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <button class="ghost" id="prev">◀ 이전</button>
+  <button class="ghost" id="auto" title="12초마다 자동으로 넘기기">▶ 자동 넘김</button>
+  <span class="count" id="count"></span>
+  <span class="hint">키보드 ← → 로도 넘길 수 있어요</span>
+  <button id="next">다음 ▶</button>
+</footer>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const nav = document.getElementById("nav");
+  const bar = document.getElementById("bar");
+  const count = document.getElementById("count");
+  const prev = document.getElementById("prev");
+  const next = document.getElementById("next");
+  const auto = document.getElementById("auto");
+  let cur = 0;
+  let timer = null;
+
+  slides.forEach((slide, i) => {
+    const b = document.createElement("button");
+    b.textContent = slide.dataset.nav;
+    b.onclick = () => go(i);
+    nav.appendChild(b);
+  });
+
+  function go(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((slide, idx) => {
+      slide.classList.toggle("on", idx === cur);
+      slide.classList.toggle("left", idx < cur);
+    });
+    [...nav.children].forEach((b, idx) => b.classList.toggle("on", idx === cur));
+    bar.style.width = ((cur + 1) / slides.length) * 100 + "%";
+    count.textContent = cur + 1 + " / " + slides.length;
+    prev.disabled = cur === 0;
+    next.disabled = cur === slides.length - 1;
+    slides[cur].scrollTop = 0;
+    if (cur === slides.length - 1) stopAuto();
+    try { history.replaceState(null, "", "#" + (cur + 1)); } catch (e) {}
+  }
+
+  function stopAuto() {
+    clearInterval(timer);
+    timer = null;
+    auto.textContent = "▶ 자동 넘김";
+  }
+
+  auto.onclick = () => {
+    if (timer) return stopAuto();
+    auto.textContent = "⏸ 멈춤";
+    timer = setInterval(() => go(cur + 1), 12000);
+  };
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    if (e.key === "Home") go(0);
+    if (e.key === "End") go(slides.length - 1);
+  });
+
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
