@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import OpenAI from "openai";
 import classes from "./App.module.css";
 import ExcelUploader from "./component/ExcelUploader";
+import { makeClassFormHwpx } from "./component/makeHwpx";
 
 // 총 14반까지만 가능..
 const CLASS_NAME = [
@@ -46,12 +47,13 @@ const EXPLAINS = [
     ],
   },
   {
-    title: "🚀 추천 순서 (버튼 1 → 4)",
+    title: "🚀 추천 순서 (버튼 1 → 5)",
     items: [
       "1. AI편성: 굿/배드 학생을 반마다 고르게 나누고, 입력한 조건(같은 반 / 다른 반 등)에 맞춰 조건에 적은 학생과 비고가 있는 학생을 다시 배치합니다. 하루 10회까지 쓸 수 있어요.",
       "2. 자동배분: 생활지도·학습부진·다문화·학부모 → 그룹 → 인원수(특수반은 +1명으로 계산)·성비 순서로 균형을 맞춥니다. 굿/배드 학생은 옮기지 않습니다.",
       "3. 중복이름확인: 한 반에 이름(성 제외)이 같은 학생을 빨간색으로 표시합니다. 다시 누르면 해제돼요.",
       "4. 엑셀파일 저장: 나이스용 / 명렬표 / 기존학급기준 3개 파일이 저장됩니다.",
+      "5. 한글 양식 저장: 학급편성 계획의 서식1(진급 반 편성 통계표)·서식2(이전반 기준)·서식3(진급반 기준)이 한글(.hwpx) 파일 하나로 저장됩니다. 학년도·학년은 자동으로 들어갑니다.",
     ],
   },
   {
@@ -2687,6 +2689,36 @@ function App() {
     writeFile(book3, `내년도 학급편성자료(기존학급기준).xlsx`);
   };
 
+  //한글(HWPX) 양식 파일 만들어서 저장 (서식1 통계표 / 서식2 이전반 기준 / 서식3 진급반 기준)
+  const makeHwpxFile = async () => {
+    try {
+      const res = await fetch(`${process.env.PUBLIC_URL}/hwpx/header.xml`);
+      if (!res.ok) throw new Error("양식 스타일 파일을 불러오지 못했습니다.");
+      const headerXml = await res.text();
+      const { file, fileName } = await makeClassFormHwpx({
+        yearGrade,
+        nextClasses: nextAdaptClass,
+        classNames: CLASS_NAME[hanglOrNum],
+        headerXml,
+      });
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "한글 파일 저장 실패",
+        text: err.message || "한글 파일을 만드는 중 문제가 생겼습니다.",
+      });
+    }
+  };
+
   // ============================================================
   // 비고 편집 관련 상수 및 함수들
   // ============================================================
@@ -3271,6 +3303,13 @@ function App() {
 
             <button className={classes["settingBtn"]} onClick={makeExcelFile}>
               4. 엑셀파일 저장
+            </button>
+            <button
+              className={classes["settingBtn"]}
+              onClick={makeHwpxFile}
+              title="학급편성 계획 서식1(통계표)·서식2(이전반 기준)·서식3(진급반 기준)을 한글 파일로 저장"
+            >
+              5. 한글 양식 저장
             </button>
 
             <button
