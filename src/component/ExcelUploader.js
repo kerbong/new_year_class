@@ -119,6 +119,32 @@ const ExcelUploader = (props) => {
     <div style={{ fontSize: "1.5rem" }}>
       {" "}
       <h1> 분 반 해 요 😄</h1>
+      {/* 왜 골고루 섞어야 하는지 짧은 안내 */}
+      <div className={classes["whyMix"]}>
+        <p className={classes["whyMixTitle"]}>
+          어차피 내년에도 문제는 생길 텐데, 왜 골고루 섞을까요?
+        </p>
+        <ul>
+          <li>
+            담임과의 <b>케미는 고를 수 없지만, 출발선은 고를 수 있어요.</b>
+          </li>
+          <li>
+            어려움이 한 반에 몰리면 <b>1+1이 2가 아니라 3</b>이 돼요. 섞으면
+            문제의 총량이 줄어요.
+          </li>
+          <li>
+            목표는 문제 없는 반이 아니라, <b>어느 반도 처음부터 불리하지 않은 반</b>
+            이에요.
+          </li>
+        </ul>
+        <a
+          href={`${process.env.PUBLIC_URL}/why-mix.html`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          자세히 보기 →
+        </a>
+      </div>
       <div className={classes["uploaderWrap"]}>
         {/* 설명부분 */}
         <div className={classes["how-to-use"]}>

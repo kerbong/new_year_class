@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>분반해요 · 왜 골고루 섞어야 할까</title>
+<style>
+  :root {
+    --navy: #1f4e78; --green: #548235; --purple: #a852cb; --red: #c00000;
+    --bg: #f3f6fa; --card: #ffffff; --ink: #1d2733; --muted: #5d6b7a; --line: #d9e1ea;
+    --cream: #fff9e5; --pink: #fde9e7; --mint: #e8f3e3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.75; font-size: 17px;
+  }
+  header { background: var(--navy); color: #fff; padding: 14px 24px; font-weight: 800; }
+  header a { color: #fff; opacity: .8; font-weight: 400; font-size: 14px; margin-left: 12px; }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: clamp(28px, 5vw, 44px); color: var(--navy); letter-spacing: -1px; line-height: 1.3; margin: 8px 0 12px; }
+  h2 { font-size: clamp(22px, 3.2vw, 30px); color: var(--navy); letter-spacing: -.5px; margin: 0 0 12px; line-height: 1.35; }
+  h3 { font-size: 19px; margin: 18px 0 6px; }
+  .lead { font-size: clamp(17px, 2vw, 20px); color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px; margin: 22px 0; }
+  .num { display: inline-block; background: var(--navy); color: #fff; border-radius: 8px; padding: 2px 10px; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .quote { background: var(--cream); border-left: 6px solid #e0b100; border-radius: 12px; padding: 16px 18px; margin: 18px 0; }
+  .key { background: var(--mint); border-left: 6px solid var(--green); border-radius: 12px; padding: 14px 18px; margin: 16px 0; font-weight: 600; }
+  .toc { display: grid; gap: 8px; padding: 0; list-style: none; margin: 18px 0 0; }
+  .toc a { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; color: var(--ink); text-decoration: none; }
+  .toc a:hover { border-color: var(--navy); }
+  .toc b { color: var(--navy); margin-right: 6px; }
+
+  /* 몰림 vs 분산 그림 */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 640px) { .compare { grid-template-columns: 1fr; } }
+  .scene { border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .scene.bad { background: var(--pink); }
+  .scene.good { background: var(--mint); }
+  .scene h4 { margin: 0 0 10px; font-size: 16px; }
+  .classes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cls { background: #fff; border-radius: 10px; padding: 8px 6px; text-align: center; font-size: 13px; }
+  .dots { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin: 6px 0; min-height: 52px; align-content: flex-start; }
+  .dots i { width: 9px; height: 9px; border-radius: 50%; background: #c9d6e4; }
+  .dots i.r { background: var(--red); }
+  .meter { height: 8px; border-radius: 4px; background: #eee; overflow: hidden; }
+  .meter span { display: block; height: 100%; }
+  .caption { font-size: 14px; color: var(--muted); margin: 8px 0 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 15px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; vertical-align: top; }
+  th { color: var(--navy); background: #f7f9fc; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  .refs { font-size: 14px; color: var(--muted); }
+  .refs li { margin: 6px 0; }
+  .back { display: inline-block; margin-top: 10px; color: var(--navy); font-weight: 700; }
+</style>
+</head>
+<body>
+<header>분반해요 <a href="./">← 분반 화면으로</a></header>
+<main>
+  <p class="num">분반 전에 함께 읽어요</p>
+  <h1>어차피 내년에도 문제는 생기는데,<br />왜 이렇게까지 골고루 섞어야 할까요?</h1>
+  <p class="lead">맞아요. 어떻게 섞어도 문제는 생기고, 한 해 학급의 분위기는 결국 새 담임선생님과 아이들의 ‘케미’에 크게 달려 있어요. 그 회의감은 현장의 정직한 감각입니다. 그래도 섞는 일이 의미 있는 이유를 <b>집단 구성이 성과에 미치는 영향</b>과 <b>유불리(공정성)</b> 관점에서 정리했어요.</p>
+
+  <div class="quote">
+    <b>한 줄 요약</b><br />
+    골고루 섞는 목적은 <u>문제 없는 반</u>을 만드는 게 아니라, <u>어느 반도 감당하지 못할 만큼 문제가 커지지 않게</u> 하고, <u>어느 반도 처음부터 불리하지 않게</u> 하는 것입니다.
+  </div>
+
+  <ul class="toc">
+    <li><a href="#s1"><b>1</b>케미는 못 고르지만, 출발선은 고를 수 있어요</a></li>
+    <li><a href="#s2"><b>2</b>어려움이 몰리면 1+1이 2가 아니라 3이 돼요</a></li>
+    <li><a href="#s3"><b>3</b>섞인 집단이 평균적으로 손해가 적어요</a></li>
+    <li><a href="#s4"><b>4</b>유불리가 생기면 학생·교사·학부모 모두 힘들어요</a></li>
+    <li><a href="#s5"><b>5</b>과정이 공정해야 결과에 납득해요</a></li>
+    <li><a href="#s6"><b>6</b>그래서, 현실적인 목표는?</a></li>
+  </ul>
+
+  <section id="s1">
+    <span class="num">1</span>
+    <h2>케미는 못 고르지만, 출발선은 고를 수 있어요</h2>
+    <p>학급 운영의 성패에는 여러 변수가 섞여 있어요. 그중 <b>담임과 아이들의 궁합</b>, 그해의 사건·사고처럼 <b>통제할 수 없는 변수</b>가 크다는 건 사실입니다. 교사 효과가 학교 안 요인 중 가장 크다는 연구도 많아요.</p>
+    <p>하지만 담임이 일하는 무대, 즉 <b>“어떤 아이들이 어떤 비율로 모여 있는가”</b>는 분반 단계에서 거의 유일하게 우리가 손댈 수 있는 변수예요. 같은 선생님이라도 지원이 필요한 학생이 2명인 반과 7명인 반에서 할 수 있는 일은 완전히 달라요.</p>
+    <div class="key">통제할 수 없는 변수가 크다는 것은, 통제할 수 있는 변수를 포기할 이유가 아니라 <u>그것만큼은 제대로 챙겨야 할 이유</u>입니다.</div>
+  </section>
+
+  <section id="s2">
+    <span class="num">2</span>
+    <h2>어려움이 몰리면 1+1이 2가 아니라 3이 돼요</h2>
+    <p>“섞어봐야 문제를 이 반에서 저 반으로 옮기는 것뿐”이라는 말이 있죠. 그런데 학급 문제는 <b>더하기가 아니라 곱하기</b>에 가깝게 움직입니다.</p>
+    <div class="compare">
+      <div class="scene bad">
+        <h4>몰려 있을 때</h4>
+        <div class="classes">
+          <div class="cls">1반<div class="dots"><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:100%;background:var(--red)"></span></div></div>
+          <div class="cls">2반<div class="dots"><i class="r"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:12%;background:var(--green)"></span></div></div>
+          <div class="cls">3반<div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:5%;background:var(--green)"></span></div></div>
+          <div class="cls">4반<div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:5%;background:var(--green)"></span></div></div>
+        </div>
+        <p class="caption">1반에서 서로 영향을 주고받는 무리가 생기고, 그게 그 반의 ‘분위기’가 됩니다. 담임 혼자 감당하기 어려운 수준.</p>
+      </div>
+      <div class="scene good">
+        <h4>골고루 섞였을 때</h4>
+        <div class="classes">
+          <div class="cls">1반<div class="dots"><i class="r"></i><i class="r"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:28%;background:#e0b100"></span></div></div>
+          <div class="cls">2반<div class="dots"><i class="r"></i><i class="r"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:28%;background:#e0b100"></span></div></div>
+          <div class="cls">3반<div class="dots"><i class="r"></i><i class="r"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:28%;background:#e0b100"></span></div></div>
+          <div class="cls">4반<div class="dots"><i class="r"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><span style="width:15%;background:var(--green)"></span></div></div>
+        </div>
+        <p class="caption">같은 8명이지만 각 반에서는 소수라, 다수의 분위기를 따라가는 쪽이 됩니다. 담임이 개별로 챙길 수 있는 수준.</p>
+      </div>
+    </div>
+    <p>그림 속 빨간 점의 수는 양쪽 모두 8명으로 같아요. 달라지는 건 <b>밀도</b>입니다.</p>
+    <ul>
+      <li><b>무리가 되면 규범이 바뀝니다.</b> 한두 명일 때는 ‘튀는 행동’이던 것이, 서너 명이 모이면 그 반의 ‘정상’이 되고 다른 학생들도 따라가기 시작해요.</li>
+      <li><b>교사의 개입 여력에는 한계가 있습니다.</b> 한 명에게 쓰는 시간은 나머지 학생 모두의 수업 시간이에요. 개입이 필요한 학생이 늘면 학급 전체의 학습 시간이 급격히 줄어요.</li>
+      <li><b>연구 결과도 같은 방향입니다.</b> 수업을 자주 방해하는 학생이 한 반에 더 있을수록 같은 반 친구들의 성취가 낮아지고 문제행동이 늘었다는 미국 연구(Carrell &amp; Hoekstra, 2010)처럼, 또래 구성의 영향은 꾸준히 보고되고 있어요.</li>
+    </ul>
+    <div class="key">그래서 골고루 섞는 것은 문제를 ‘옮기는’ 일이 아니라, 문제가 서로를 키우지 못하게 해서 <u>학년 전체 문제의 총량을 줄이는</u> 일이에요.</div>
+  </section>
+
+  <section id="s3">
+    <span class="num">3</span>
+    <h2>섞인 집단이 평균적으로 손해가 적어요</h2>
+    <p>성적, 성별, 생활 특성이 한쪽으로 치우친 반은 대체로 특정 집단의 손해로 이어진다는 연구들이 쌓여 있어요.</p>
+    <table>
+      <tr><th>구성 요소</th><th>치우쳤을 때 생기는 일</th><th>섞었을 때 기대할 수 있는 점</th></tr>
+      <tr><td>학업 수준</td><td>수준별로 반을 묶으면 상위 반의 이득은 크지 않은 반면, 하위 반은 기대·자극·롤모델이 줄어 격차가 벌어지기 쉬워요.</td><td>하위 학생은 또래에게서 배울 기회가 늘고, 상위 학생의 손해는 거의 없다는 결과가 많아요.</td></tr>
+      <tr><td>성비</td><td>한쪽 성별이 지나치게 많으면 학급 분위기·활동 구성에 쏠림이 생겨요.</td><td>여학생 비율이 적정하게 있을 때 학급 소란이 줄고 관계가 안정됐다는 연구(Lavy &amp; Schlosser, 2011)가 있어요.</td></tr>
+      <tr><td>생활·관계</td><td>갈등 관계, 같은 무리가 그대로 옮겨 가면 작년의 문제가 그대로 재현돼요.</td><td>관계가 ‘리셋’되면서 새 친구 관계를 만들 기회가 생겨요.</td></tr>
+      <tr><td>지원이 필요한 학생</td><td>특수·상담·학습지원 학생이 한 반에 몰리면 지원 인력과 담임 모두 과부하.</td><td>각 반에서 충분한 관심을 받을 수 있는 밀도가 유지돼요.</td></tr>
+    </table>
+    <p class="caption">※ 연구마다 맥락이 달라 효과의 크기는 차이가 있지만, “한쪽으로 몰아서 이득을 본다”는 근거보다 “골고루 섞는 쪽이 손해가 적다”는 근거가 훨씬 많습니다.</p>
+  </section>
+
+  <section id="s4">
+    <span class="num">4</span>
+    <h2>유불리가 생기면 학생·교사·학부모 모두 힘들어요</h2>
+    <p>구성이 치우치면 그 해는 <b>“시작부터 운이 좋은 반”과 “시작부터 불리한 반”</b>으로 나뉩니다. 이건 성과 문제이기 전에 공정성의 문제예요.</p>
+    <h3>학생에게</h3>
+    <ul><li>어느 반에 배정됐느냐에 따라 1년 동안 받는 수업의 질과 관심의 양이 달라져요. 학생 입장에서 이건 본인이 선택한 게 아닌 ‘운’이에요.</li></ul>
+    <h3>담임에게</h3>
+    <ul>
+      <li>부담이 몰린 반의 담임은 같은 노력으로도 성과가 덜 나고, 소진(번아웃) 위험이 커져요.</li>
+      <li>“그 반 누가 맡을래?” 같은 담임 배정 갈등, 반 배정 후 교사 간 불편함도 여기서 시작돼요.</li>
+    </ul>
+    <h3>학부모·학교에게</h3>
+    <ul><li>반 편성 결과가 치우쳐 보이면 민원과 반 교체 요구가 생기고, 학교에 대한 신뢰가 흔들려요. 반대로 기준대로 고르게 섞었다면 설명할 근거가 생겨요.</li></ul>
+    <div class="key">골고루 섞기는 모든 반을 ‘좋은 반’으로 만들 수는 없지만, 어떤 반도 ‘처음부터 불리한 반’이 되지 않게는 할 수 있어요.</div>
+  </section>
+
+  <section id="s5">
+    <span class="num">5</span>
+    <h2>과정이 공정해야 결과에 납득해요</h2>
+    <p>사람들은 결과가 마음에 들지 않아도, <b>결정 과정이 공정했다고 느끼면</b> 결과를 더 잘 받아들입니다(절차적 공정성).</p>
+    <ul>
+      <li>성적·성비·관계·지원 필요도를 <b>같은 기준으로 고려했다는 기록</b>이 있으면, “왜 우리 아이가 그 반이냐”는 질문에 답할 수 있어요.</li>
+      <li>여러 선생님이 함께 보고 조정한 과정 자체가, 이후 학급에서 어려움이 생겼을 때 <b>“그 반 담임 탓”이 아니라 “학년이 함께 대응할 일”</b>로 받아들이게 하는 바탕이 돼요.</li>
+    </ul>
+  </section>
+
+  <section id="s6">
+    <span class="num">6</span>
+    <h2>그래서, 현실적인 목표는?</h2>
+    <table>
+      <tr><th>❌ 이렇게 기대하면 실망해요</th><th>⭕ 이렇게 기대하면 충분해요</th></tr>
+      <tr><td>문제가 생기지 않는 반</td><td>문제가 생겨도 감당할 수 있는 반</td></tr>
+      <tr><td>모든 반이 똑같이 잘 되는 것</td><td>어느 반도 처음부터 불리하지 않은 것</td></tr>
+      <tr><td>완벽한 배정</td><td>설명 가능하고 함께 동의한 배정</td></tr>
+      <tr><td>분반으로 1년이 결정됨</td><td>분반은 출발선, 나머지는 담임·학년의 몫</td></tr>
+    </table>
+    <p>분반은 1년의 결과를 정하는 일이 아니라, <b>모든 담임선생님이 비슷한 조건에서 출발하도록 판을 고르게 까는 일</b>이에요. 그 위에서 만들어지는 케미는 각 반의 몫이고요. 판이 고르게 깔려 있을수록 케미가 좋은 반은 더 잘 되고, 어려운 반도 바닥까지 떨어지지 않습니다.</p>
+    <a class="back" href="./">← 분반하러 가기</a>
+  </section>
+
+  <section>
+    <h2 style="font-size:20px">참고한 연구</h2>
+    <ul class="refs">
+      <li>Carrell, S. E., &amp; Hoekstra, M. L. (2010). Externalities in the Classroom: How Children Exposed to Domestic Violence Affect Everyone's Kids. <i>American Economic Journal: Applied Economics</i>. — 수업 방해 학생 비율과 또래 성취·문제행동</li>
+      <li>Lavy, V., &amp; Schlosser, A. (2011). Mechanisms and Impacts of Gender Peer Effects at School. <i>American Economic Journal: Applied Economics</i>. — 학급 성비와 학급 분위기·성취</li>
+      <li>Slavin, R. E. (1990). Achievement Effects of Ability Grouping in Secondary Schools: A Best-Evidence Synthesis. <i>Review of Educational Research</i>. — 수준별 학급 편성의 효과</li>
+      <li>Hoxby, C. (2000). Peer Effects in the Classroom: Learning from Gender and Race Variation. <i>NBER Working Paper</i>. — 또래 구성 효과 전반</li>
+      <li>Tyler, T. R. (2006). <i>Why People Obey the Law</i>. — 절차적 공정성과 결과 수용</li>
+    </ul>
+    <p class="refs">대부분 해외 연구로, 우리 학교 상황에 그대로 적용하기보다는 ‘방향’을 참고하는 용도로 읽어주세요.</p>
+  </section>
+</main>
+</body>
+</html>
