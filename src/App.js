@@ -49,6 +49,8 @@ const EXPLAIN_LEGEND = [
   { label: "특수반", className: "specialStudent" },
   { label: "선택한 현재학급 (남)", className: "highlightedExClassMale" },
   { label: "선택한 현재학급 (여)", className: "highlightedExClassFemale" },
+  { label: "중복이름 (성까지 같음)", className: "dupli-stu-bg" },
+  { label: "중복이름 (이름만 같음)", className: "dupli-given-bg" },
 ];
 
 const EXPLAINS = [
@@ -65,10 +67,10 @@ const EXPLAINS = [
     title: "🚀 추천 순서 (버튼 1 → 4)",
     items: [
       "처음 분반: 현재 반마다 점수 순으로 줄을 세워 1등부터 Z(또는 ㄹ) 방식으로 내년 반에 차례로 넣습니다. 현재 반마다 시작하는 내년 반을 하나씩 밀어서, 각 반 1등이 한 반에 몰리지 않아요. '성비 고려'를 고르면 남학생·여학생을 따로 돌려 넣습니다.",
-      "1. 자동배분: ① 같은 그룹(그룹1, 그룹2…) 학생 떼어놓기·쌍둥이(같은 반/다른 반을 물어봐요) ② 특수(특수반) 학생 고르게 ③ 굿/배드 고르게 ④ 생활지도·학부모(상/중/하)·학습부진·다문화·전출 고르게 ⑤ 인원수(전출 제외, 특수 학생이 있는 반은 1명 적게) ⑥ 성비 ⑦ 반별 평균 점수 순서로 맞춥니다.",
+      "1. 자동배분: ① 같은 그룹(그룹1, 그룹2…) 학생 떼어놓기·쌍둥이(같은 반/다른 반을 물어봐요) ② 특수(특수반) 학생 고르게 ③ 굿/배드 고르게 ④ 생활지도·학부모(상/중/하)·학습부진·다문화·전출 고르게 (어려운 학생이 한 반에 겹치지 않게 반별 합계도 맞춤) ⑤ 인원수(전출 제외, 반마다 최대 1명 차이 · 특수 학생이 있는 반이 적은 쪽. 두 가지가 부딪치면 어느 쪽으로 할지 물어봐요) ⑥ 성비 ⑦ 반별 평균 점수 순서로 맞춥니다.",
       "자동배분에서 학생을 옮길 때는 비고가 없는 학생과 맞바꾸는데, 같은 현재반·같은 성별·점수가 가장 비슷한 학생을 먼저 고릅니다.",
       "쌍둥이는 성과 생년월일로 짝을 찾습니다. 못 찾으면 비고에 '쌍둥이1', '쌍둥이2'처럼 짝끼리 같은 번호를 적어주세요.",
-      "2. 중복이름확인: 한 반에 이름(성 제외)이 같은 학생을 빨간색으로 표시합니다. 다시 누르면 해제돼요.",
+      "2. 중복이름확인: 한 반에 성까지 이름이 똑같은 학생은 진한 빨강, 성만 다르고 이름이 같은 학생은 연한 빨강으로 표시합니다. 다시 누르면 해제돼요.",
       "3. 엑셀파일 저장: 나이스용 / 명렬표 / 기존학급기준 3개 파일이 저장됩니다.",
       "4. 한글 양식 저장: 학급편성 계획의 서식1(진급 반 편성 통계표)·서식2(이전반 기준)·서식3(진급반 기준)이 한글(.hwpx) 파일 하나로 저장됩니다. 학년도·학년은 자동으로 들어갑니다.",
     ],
@@ -514,10 +516,50 @@ function App() {
       );
       const twinRules = await askTwinRules(copied);
       const classNames = CLASS_NAME[hanglOrNum];
-      const { classes: result, report } = autoDistribute(copied, {
+      const original = JSON.stringify(copied);
+      let { classes: result, report } = autoDistribute(copied, {
         twinRules,
         classNames,
       });
+
+      // '반 인원 차이 최대 1명'과 '특수반은 적게'가 부딪치면 선생님께 물어보기
+      const choice = report.sizeChoice;
+      if (choice?.conflict) {
+        const sizesHtml = (sizes) =>
+          sizes
+            .map(
+              (n, i) =>
+                `${classNames[i]}반 ${n}명${
+                  choice.specialCount[i] > 0 ? "<sup>특수</sup>" : ""
+                }`
+            )
+            .join(" · ");
+        const answer = await Swal.fire({
+          icon: "question",
+          title: "반 인원을 어떻게 맞출까요?",
+          html: `
+            <p style="font-size:14px;">이번 명단은 <b>반 인원을 고르게</b> 하면 특수 학생이 있는 반이 다른 반보다 적어지지 않아요. (전출 제외 인원)</p>
+            <div style="text-align:left;font-size:14px;line-height:1.7;margin-top:12px;">
+              <b>① 인원 고르게</b> (반 사이 최대 1명 차이)<br/>${sizesHtml(choice.even)}<br/><br/>
+              <b>② 특수반은 적게</b> (특수 학생 1명당 1명 적게)<br/>${sizesHtml(choice.specialSmaller)}
+            </div>`,
+          showDenyButton: true,
+          confirmButtonText: "① 인원 고르게",
+          denyButtonText: "② 특수반은 적게",
+          confirmButtonColor: "#85bd82",
+          denyButtonColor: "#b886b8",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          width: 600,
+        });
+        if (answer.isDenied) {
+          ({ classes: result, report } = autoDistribute(JSON.parse(original), {
+            twinRules,
+            classNames,
+            sizeRule: "specialSmaller",
+          }));
+        }
+      }
 
       setNextAdaptClass(orderByGenderName(result, numberOrder || firstMale));
 
@@ -566,51 +608,33 @@ function App() {
   };
 
   //각반의 중복이름 체크함수
+  // 성까지 같은 이름 → 진한 빨강, 성만 다르고 이름이 같으면 → 연한 빨강
   const duplicateCheck = (nowState) => {
-    //중복 해제가 되면.. 모든 학생에 있는 배경색 제거
-    if (!nowState) {
-      nextAdaptClass.forEach((cl) => {
-        cl.forEach((s) => {
-          document
-            .getElementById(`${s.exClass}-${s.num}`)
-            .classList.remove(classes["dupli-stu-bg"]);
-        });
+    const FULL = classes["dupli-stu-bg"];
+    const GIVEN = classes["dupli-given-bg"];
+    const elOf = (stu) => document.getElementById(`${stu.exClass}-${stu.num}`);
+
+    nextAdaptClass.forEach((cl) => {
+      cl.forEach((stu) => elOf(stu)?.classList.remove(FULL, GIVEN));
+    });
+    if (!nowState) return;
+
+    nextAdaptClass.forEach((cl) => {
+      const fullCount = {};
+      const givenCount = {};
+      cl.forEach((stu) => {
+        const full = String(stu.name || "").trim();
+        if (!full) return;
+        fullCount[full] = (fullCount[full] || 0) + 1;
+        givenCount[full.slice(1)] = (givenCount[full.slice(1)] || 0) + 1;
       });
-    } else {
-      nextAdaptClass.forEach((cl) => {
-        cl.forEach((stu, stu_index) => {
-          // 중복학생 인덱스 찾기
-          let dupli_index = cl.findIndex(
-            (i) => i.name.slice(1) === stu.name.slice(1)
-          );
-
-          if (dupli_index !== stu_index) {
-            const firstElement = document.getElementById(
-              `${cl[dupli_index].exClass}-${cl[dupli_index].num}`
-            );
-            const secondElement = document.getElementById(
-              `${stu.exClass}-${stu.num}`
-            );
-
-            // if (nowState) {
-
-            // 상태가 true면 클래스 추가
-            if (!firstElement.classList.contains(classes["dupli-stu-bg"])) {
-              firstElement.classList.add(classes["dupli-stu-bg"]);
-            }
-            if (!secondElement.classList.contains(classes["dupli-stu-bg"])) {
-              secondElement.classList.add(classes["dupli-stu-bg"]);
-            }
-
-            // } else {
-            //   // 상태가 false면 클래스 제거
-            //   firstElement.classList.remove(classes["dupli-stu-bg"]);
-            //   secondElement.classList.remove(classes["dupli-stu-bg"]);
-            // }
-          }
-        });
+      cl.forEach((stu) => {
+        const full = String(stu.name || "").trim();
+        if (!full) return;
+        if (fullCount[full] > 1) elOf(stu)?.classList.add(FULL);
+        else if (givenCount[full.slice(1)] > 1) elOf(stu)?.classList.add(GIVEN);
       });
-    }
+    });
   };
 
   //빈자리 클릭했을 때 학생 넣어주기

@@ -10,7 +10,7 @@
 //   2) 특수(특수반) 학생 고르게
 //   3) 굿 / 배드 고르게
 //   4) 생활지도·학부모(상3 중2 하1), 학습부진·다문화·전출 고르게
-// 그 다음 인원수(전출 제외, 특수 학생이 있는 반은 1명 적게) → 성비 → 반별 평균 점수 순서로 맞춘다.
+// 그 다음 인원수(전출 제외, 반마다 최대 1명 차이 · 특수 학생이 있는 반이 적은 쪽. 두 가지가 부딪치면 어느 쪽으로 할지 물어봐요) → 성비 → 반별 평균 점수 순서로 맞춘다.
 
 const noteOf = (s) => String(s?.note || "");
 const has = (s, w) => noteOf(s).includes(w);
@@ -47,6 +47,18 @@ const CATEGORIES = [
   { name: "학습부진", weight: 30, value: (s) => (has(s, "학습부진") ? 1 : 0) },
   { name: "다문화", weight: 30, value: (s) => (has(s, "다문화") ? 1 : 0) },
   { name: "전출", weight: 30, value: (s) => (isTransfer(s) ? 1 : 0) },
+  // 항목별로는 고르게 나뉘어도, 남는 1명씩이 한 반에 몰릴 수 있어 반별 부담 합계도 맞춘다
+  {
+    name: "부담합계",
+    weight: 15,
+    value: (s) =>
+      (isSpecial(s) ? 2 : 0) +
+      (isBad(s) ? 2 : 0) +
+      levelWeight(s, "생활지도") +
+      levelWeight(s, "학부모") +
+      (has(s, "학습부진") ? 1 : 0) +
+      (has(s, "다문화") ? 1 : 0),
+  },
 ];
 const CONFLICT_COST = 100000;
 const MAX_LOOPS = 5000;
@@ -110,10 +122,17 @@ export function findTwinGroups(classes) {
 
 /**
  * @param {Array<Array<object>>} input 반별 학생 배열 (학생 객체는 그대로 재사용하므로 미리 깊은 복사해서 넘길 것)
- * @param {{twinRules?: Array<{members: string[], mode: "same"|"apart"|"none"}>}} options
+ * @param {{twinRules?: Array<{members: string[], mode: "same"|"apart"|"none"}>,
+ *          classNames?: string[], sizeRule?: "even"|"specialSmaller"}} options
  *   members는 studentKey() 값
+ *   sizeRule: "even" = 반 인원 차이 최대 1명 (남는 인원은 특수 학생 없는 반부터)
+ *             "specialSmaller" = 특수 학생 1명당 그 반을 1명 적게 (반 사이 2명 이상 차이 날 수 있음)
+ *   두 규칙이 서로 다른 결과를 낼 때 report.sizeChoice.conflict = true (화면에서 교사에게 물어봄)
  */
-export function autoDistribute(input, { twinRules = [], classNames = [] } = {}) {
+export function autoDistribute(
+  input,
+  { twinRules = [], classNames = [], sizeRule = "even" } = {}
+) {
   const classes = input.map((cl) => (cl || []).filter(Boolean));
   const K = classes.length;
   const nameOf = (i) => (classNames[i] ? `${classNames[i]}반` : `${i + 1}번째 반`);
@@ -285,20 +304,40 @@ export function autoDistribute(input, { twinRules = [], classNames = [] } = {}) 
   const specialCount = classes.map(
     (cl) => cl.filter((s) => active(s) && isSpecial(s)).length
   );
-  const effTotal =
-    activeAll.length + specialCount.reduce((a, b) => a + b, 0);
-  const base = Math.floor(effTotal / K);
-  const rem = effTotal % K;
-  // 남는 인원은 특수 학생이 없는 반부터, 지금 인원이 많은 반부터 받는다 (이동 최소화)
+  const totalSpecial = specialCount.reduce((x, y) => x + y, 0);
+  // 1명 더 받는 반(나머지 인원)은 특수 학생이 적은 반부터, 같으면 지금 인원이 많은 반부터 (이동 최소화)
   const order = [...Array(K).keys()].sort((x, y) => {
-    if ((specialCount[x] > 0) !== (specialCount[y] > 0))
-      return specialCount[x] > 0 ? 1 : -1;
+    if (specialCount[x] !== specialCount[y]) return specialCount[x] - specialCount[y];
     return sizeOf(y) + specialCount[y] - (sizeOf(x) + specialCount[x]);
   });
-  const target = Array(K).fill(0);
-  order.forEach((i, rank) => {
-    target[i] = base + (rank < rem ? 1 : 0) - specialCount[i];
-  });
+  const spread = (total, minus) => {
+    const t = Array(K).fill(0);
+    const base = Math.floor(total / K);
+    const rem = total % K;
+    order.forEach((i, rank) => {
+      t[i] = base + (rank < rem ? 1 : 0) - minus[i];
+    });
+    return t;
+  };
+  // even: 반 인원 차이 최대 1명. 예) 96명 4반·특수 2명 → 24·24·24·24
+  const evenTarget = spread(activeAll.length, Array(K).fill(0));
+  // specialSmaller: 특수 학생 1명을 2명으로 쳐서 맞춤. 예) 96명 4반·특수 2명 → 23·25·23·25
+  const smallTarget = spread(activeAll.length + totalSpecial, specialCount);
+  // even 규칙에서 특수반이 특수 없는 반보다 작지 않은 경우가 있으면 두 규칙이 부딪친다
+  const conflict =
+    totalSpecial > 0 &&
+    evenTarget.some((t, i) =>
+      specialCount[i] > 0 &&
+      evenTarget.some((u, j) => specialCount[j] === 0 && t >= u)
+    ) &&
+    smallTarget.join() !== evenTarget.join();
+  report.sizeChoice = {
+    conflict,
+    specialCount,
+    even: evenTarget,
+    specialSmaller: smallTarget,
+  };
+  const target = sizeRule === "specialSmaller" ? smallTarget : evenTarget;
 
   const stuck = new Set(); // 옮길 학생이 없는 반
   for (let loop = 0; loop < MAX_LOOPS; loop++) {
