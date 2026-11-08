@@ -1,85 +1,24 @@
 # 새 학년 학급 편성 프로그램
 
-AI 기반 학급 편성 프로그램입니다. OpenAI API를 활용하여 학생들을 균형있게 배치할 수 있습니다.
+올해 반별 명단(엑셀)을 올리면 내년 반을 나눠주는 프로그램입니다. 학생 정보는 브라우저 안에서만 처리되고 어디에도 전송·저장되지 않습니다.
 
-## 🤖 AI 기능 사용 제한
+## 사용 순서
 
-배포된 사이트에서는 AI 편성 기능이 **하루 10회로 제한**됩니다.
-- 일반 사용자: 하루 10회 제한
-- 개발자 모드: 무제한 사용 가능 (개발자 인증 필요)
+1. 입력양식(`public/class_template.xlsx`)에 올해 반별 명단을 입력해 업로드합니다.
+2. 분반 방식(Z / ㄹ), 성적 우선 / 성비 고려, 내년 학급 수를 정하고 분반합니다.
+   현재 반마다 점수 순으로 1등부터 내년 반에 차례로 넣습니다.
+3. **1. 자동배분**: 그룹 분리·쌍둥이(같은 반/다른 반을 물어봄) → 특수 학생 → 굿/배드 → 생활지도·학부모·학습부진·다문화·전출 → 인원수(전출 제외, 특수 학생이 있는 반은 1명 적게) → 성비 → 반별 평균 점수 순서로 맞춥니다.
+   학생을 옮길 때는 같은 현재반·같은 성별·점수가 가장 비슷한 학생과 맞바꿉니다.
+4. 2. 중복이름확인 → 3. 엑셀파일 저장 → 4. 한글 양식 저장
 
-## 🔐 배포 환경 설정 (GitHub Pages)
-
-### 1. GitHub Secrets 설정
-
-배포 환경에서 AI 기능을 사용하려면 GitHub Secrets에 API 키를 등록해야 합니다.
-
-1. GitHub 저장소 페이지로 이동
-2. `Settings` → `Secrets and variables` → `Actions` 클릭
-3. `New repository secret` 버튼 클릭
-4. 다음 두 개의 Secret을 추가:
-
-**REACT_APP_OPEN_API_KEY**
-- Name: `REACT_APP_OPEN_API_KEY`
-- Value: OpenAI API 키 (https://platform.openai.com/api-keys 에서 발급)
-
-**REACT_APP_DEVELOPER_KEY**
-- Name: `REACT_APP_DEVELOPER_KEY`
-- Value: 개발자 인증에 사용할 비밀번호 (원하는 문자열)
-
-### 2. OpenAI API 키 발급 방법
-
-1. https://platform.openai.com 접속
-2. 로그인 또는 회원가입
-3. API keys 메뉴로 이동
-4. `Create new secret key` 클릭
-5. 생성된 키를 복사하여 GitHub Secrets에 저장
-
-### 3. 개발자 모드 사용 방법
-
-배포된 사이트에서:
-1. "1. AI편성" 버튼 클릭
-2. "🔐 개발자 인증" 버튼 클릭
-3. GitHub Secrets에 설정한 `REACT_APP_DEVELOPER_KEY` 값 입력
-4. 인증 완료 후 무제한으로 AI 편성 사용 가능
-
-## 💻 로컬 개발 환경 설정
-
-### 1. 저장소 클론
-
-```bash
-git clone https://github.com/your-username/new_year_class.git
-cd new_year_class
-```
-
-### 2. 환경 변수 설정
-
-`.env.example` 파일을 복사하여 `.env` 파일 생성:
-
-```bash
-cp .env.example .env
-```
-
-`.env` 파일을 열어서 API 키 입력:
-
-```env
-REACT_APP_OPEN_API_KEY=your-openai-api-key-here
-REACT_APP_DEVELOPER_KEY=your-secret-developer-key
-```
-
-### 3. 의존성 설치 및 실행
+## 로컬 개발
 
 ```bash
 npm install
 npm start
 ```
 
-## 📌 주의사항
-
-- `.env` 파일은 절대 Git에 커밋하지 마세요 (이미 .gitignore에 추가되어 있음)
-- OpenAI API는 유료 서비스입니다. 사용량에 따라 비용이 발생할 수 있습니다.
-- GitHub Secrets는 암호화되어 저장되므로 안전합니다.
-- 개발자 키는 충분히 복잡하게 설정하세요.
+입력양식을 다시 만들려면 `python scripts/make_template.py` (openpyxl 필요)
 
 ---
 

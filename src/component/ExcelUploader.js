@@ -7,6 +7,7 @@ const ExcelUploader = (props) => {
   const [classStudents, setClassStudents] = useState([]);
   const [isNew, setIsNew] = useState(true);
   const [yearGr, setYearGr] = useState("");
+  const [showWhyMix, setShowWhyMix] = useState(false);
 
   const fileInfoInput = useRef(null);
   const savedInfoInput = useRef(null);
@@ -22,16 +23,23 @@ const ExcelUploader = (props) => {
     String(str).replace(
       /[&<>"']/g,
       (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-          c
-        ])
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c],
     );
 
   const listHtml = (items, max = 12) => {
-    const shown = items.slice(0, max).map((item) => `<li>${escapeHtml(item)}</li>`);
-    if (items.length > max) shown.push(`<li>... 외 ${items.length - max}건</li>`);
+    const shown = items
+      .slice(0, max)
+      .map((item) => `<li>${escapeHtml(item)}</li>`);
+    if (items.length > max)
+      shown.push(`<li>... 외 ${items.length - max}건</li>`);
     return `<ul style="text-align:left; font-size:14px; line-height:1.6; padding-left:20px;">${shown.join(
-      ""
+      "",
     )}</ul>`;
   };
 
@@ -90,7 +98,7 @@ const ExcelUploader = (props) => {
         const { yearGrade, guessed } = getYearGrade(file.name, result.grade);
         if (guessed) {
           warnings.push(
-            `파일 이름에서 학년도/학년을 찾지 못해 '${yearGrade}'(으)로 설정했습니다.`
+            `파일 이름에서 학년도/학년을 찾지 못해 '${yearGrade}'(으)로 설정했습니다.`,
           );
         }
         setYearGr(yearGrade);
@@ -103,7 +111,7 @@ const ExcelUploader = (props) => {
         title: `${result.loaded.length}개 반, ${total}명을 불러왔어요`,
         html:
           `<p style="font-size:14px;">${escapeHtml(
-            result.loaded.map((s) => `${s.sheet}(${s.count}명)`).join(", ")
+            result.loaded.map((s) => `${s.sheet}(${s.count}명)`).join(", "),
           )}</p>` + (warnings.length > 0 ? listHtml(warnings) : ""),
         width: 600,
       });
@@ -116,46 +124,67 @@ const ExcelUploader = (props) => {
   };
 
   return (
-    <div style={{ fontSize: "1.5rem" }}>
+    <div style={{ fontSize: "1.5rem", width: "100%", maxWidth: "1132px" }}>
       {" "}
       <h1> 분 반 해 요 😄</h1>
       {/* 왜 골고루 섞어야 하는지 짧은 안내 */}
       <div className={classes["whyMix"]}>
         <p className={classes["whyMixTitle"]}>
-          어차피 내년에도 문제는 생길 텐데, 왜 골고루 섞을까요?
+          어느 반이 ‘힘든 반’이 될지는 3월이 아니라, 지금 이 명단에서
+          정해집니다.
+          <button
+            type="button"
+            className={classes["whyMixToggle"]}
+            onClick={() => setShowWhyMix((prev) => !prev)}
+            aria-expanded={showWhyMix}
+          >
+            {showWhyMix ? "접기 ▴" : "더보기 ▾"}
+          </button>
         </p>
-        <ul>
-          <li>
-            담임과의 <b>케미는 고를 수 없지만, 출발선은 고를 수 있어요.</b>
-          </li>
-          <li>
-            어려움이 한 반에 몰리면 <b>1+1이 2가 아니라 3</b>이 돼요. 섞으면
-            문제의 총량이 줄어요.
-          </li>
-          <li>
-            목표는 문제 없는 반이 아니라, <b>어느 반도 처음부터 불리하지 않은 반</b>
-            이에요.
-          </li>
-        </ul>
-        <a
-          href={`${process.env.PUBLIC_URL}/why-mix.html`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          자세히 보기 →
-        </a>
+        {showWhyMix && (
+          <>
+            <ul>
+              <li>
+                어차피 내년에도 문제는 생겨요. 그래도 담임과의{" "}
+                <b>케미는 고를 수 없지만, 출발선은 고를 수 있어요.</b>
+              </li>
+              <li>
+                어려움이 한 반에 몰리면 <b>1+1이 2가 아니라 3</b>이 돼요. 섞으면
+                문제의 총량이 줄어요.
+              </li>
+              <li>
+                목표는 문제 없는 반이 아니라,{" "}
+                <b>어느 반도 처음부터 불리하지 않은 반</b>이에요.
+              </li>
+            </ul>
+            <a
+              href={`${process.env.PUBLIC_URL}/why-mix.html`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              자세히 보기 →
+            </a>
+          </>
+        )}
       </div>
       <div className={classes["uploaderWrap"]}>
         {/* 설명부분 */}
         <div className={classes["how-to-use"]}>
           <h2>어떻게 사용하나요? 🤔</h2>
-          <p>1. 양식 엑셀파일을 다운 ("설명서", "작성예시" 시트 확인)</p>
-          <p>2. 반별 시트에 학생 자료 입력</p>
-          <p>3. 함께 입력할 땐 구글 드라이브로 공유</p>
-          <p>4. 완성된 엑셀파일을 업로드</p>
-          <p>* 반, 번호, 이름, 성별은 꼭 입력해주세요!</p>
-          <p>* 사이트 새로고침 시 정보가 사라져요!</p>
-          <p>
+          <ol className={classes["howSteps"]}>
+            <li>
+              양식 엑셀파일 내려받기{" "}
+              <span className={classes["howHint"]}>(설명서·예시 시트 확인)</span>
+            </li>
+            <li>반별 시트에 학생 자료 입력</li>
+            <li>함께 입력할 땐 구글 드라이브로 공유</li>
+            <li>완성된 엑셀파일 업로드</li>
+          </ol>
+          <ul className={classes["howNotes"]}>
+            <li>반, 번호, 이름, 성별은 꼭 입력해주세요!</li>
+            <li>사이트를 새로고침하면 작업 내용이 사라져요!</li>
+          </ul>
+          <p className={classes["howLinks"]}>
             <a
               href={`${process.env.PUBLIC_URL}/class_template.xlsx`}
               download="학급편성 입력양식.xlsx"
@@ -174,41 +203,44 @@ const ExcelUploader = (props) => {
         </div>
         {/* 파일 업로드 부분 */}
         <div className={classes["uploadBox"]}>
-          <h2>새롭게 분반하기 🫡</h2>
-          <p>자료를 입력한 엑셀양식파일을 업로드해주세요. </p>
-          <div className={classes["fileUpload"]}>
-            <label className={classes["excelLabel"]} htmlFor="excelFileInput">
-              엑셀파일 업로드
-            </label>
-            <input
-              type="file"
-              id="excelFileInput"
-              name="excelFileInput"
-              ref={fileInfoInput}
-              onChange={(e) => {
-                excelFileHandler(e, true);
-              }}
-              accept={".xls,.xlsx"}
-            />
+          <div className={classes["uploadSection"]}>
+            <h2>새롭게 분반하기 🫡</h2>
+            <p>학생 자료를 입력한 양식 파일을 올려주세요.</p>
+            <div className={classes["fileUpload"]}>
+              <label className={classes["excelLabel"]} htmlFor="excelFileInput">
+                엑셀파일 업로드
+              </label>
+              <input
+                type="file"
+                id="excelFileInput"
+                name="excelFileInput"
+                ref={fileInfoInput}
+                onChange={(e) => {
+                  excelFileHandler(e, true);
+                }}
+                accept={".xls,.xlsx"}
+              />
+            </div>
           </div>
-          <br />
 
-          <h2>분반 이어하기 😕</h2>
-          <p>저장된 엑셀파일 중 명렬표를 업로드 해주세요. </p>
-          <div className={classes["fileUpload"]}>
-            <label className={classes["excelLabel"]} htmlFor="savedFileInput">
-              분반 이어하기(명렬표 업로드)
-            </label>
-            <input
-              type="file"
-              id="savedFileInput"
-              name="savedFileInput"
-              ref={savedInfoInput}
-              onChange={(e) => {
-                excelFileHandler(e, false);
-              }}
-              accept={".xls,.xlsx"}
-            />
+          <div className={classes["uploadSection"]}>
+            <h2>분반 이어하기 😕</h2>
+            <p>저장해 둔 명렬표 파일을 올려주세요.</p>
+            <div className={classes["fileUpload"]}>
+              <label className={classes["excelLabel"]} htmlFor="savedFileInput">
+                명렬표 업로드
+              </label>
+              <input
+                type="file"
+                id="savedFileInput"
+                name="savedFileInput"
+                ref={savedInfoInput}
+                onChange={(e) => {
+                  excelFileHandler(e, false);
+                }}
+                accept={".xls,.xlsx"}
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -34,8 +34,6 @@ jobs:
         run: npm run build
         env:
           CI: false
-          REACT_APP_OPEN_API_KEY: ${{ secrets.REACT_APP_OPEN_API_KEY }}
-          REACT_APP_DEVELOPER_KEY: ${{ secrets.REACT_APP_DEVELOPER_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
